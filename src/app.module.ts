@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import * as Joi from 'joi';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
@@ -19,7 +20,36 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
 @Module({
   imports: [
     // Load environment variables from .env file
-    ConfigModule.forRoot({ isGlobal: true }),
+    ConfigModule.forRoot({
+      isGlobal: true,
+
+      // Let's define a validation schema for our environment variables using Joi.
+      // This will help us catch configuration errors early on.
+      // Note : joi is a powerful schema description language and data validator
+      // for JavaScript. It allows us to define a schema for our environment variables,
+      // specifying the expected types, default values, and validation rules. This way,
+      // if we forget to set an environment variable or set it to an invalid value,
+      // we'll get a clear error message when the application starts. So it's a win-win
+      // for both development and production environments, as it helps ensure that our
+      // application is configured correctly before it runs.
+      
+      validationSchema: Joi.object({
+        PORT: Joi.number().port().default(3001),
+        DB_HOST: Joi.string().hostname().default('127.0.0.1'),
+        DB_PORT: Joi.number().port().default(5432),
+        DB_USER: Joi.string().required(),
+        DB_PASSWORD: Joi.string().required(),
+        DB_NAME: Joi.string().required(),
+        JWT_SECRET: Joi.string().min(16).required(),
+        JWT_EXPIRES_IN: Joi.string().required(),
+        TYPEORM_DEBUG: Joi.string()
+          .valid('true', 'false', '1', '0', 'on', 'off')
+          .default('false'),
+      }),
+      validationOptions: {
+        abortEarly: false,
+      },
+    }),
     // Configure TypeORM with PostgreSQL using environment variables
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],

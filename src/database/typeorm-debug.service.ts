@@ -15,8 +15,22 @@ export class TypeormDebugService implements OnApplicationBootstrap {
 
   constructor(private readonly dataSource: DataSource) {}
 
+  private isTypeormDebugEnabled(): boolean {
+    const manualFlag = process.env.TYPEORM_DEBUG?.toLowerCase();
+
+    if (manualFlag === 'false' || manualFlag === '0' || manualFlag === 'off') {
+      return false;
+    }
+
+    if (manualFlag === 'true' || manualFlag === '1' || manualFlag === 'on') {
+      return true;
+    }
+
+    return process.env.NODE_ENV !== 'production';
+  }
+
   onApplicationBootstrap() {
-    if (process.env.NODE_ENV === 'production') {
+    if (!this.isTypeormDebugEnabled()) {
       return;
     }
 
