@@ -6,6 +6,9 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 
+// Importing the AuthModule
+import { AuthModule } from './auth/auth.module';
+
 // CRUDs modules (We dont need to import the entities here because we are using
 // autoLoadEntities in the TypeOrmModule configuration)
 import { UsersModule } from './users/users.module';
@@ -30,10 +33,12 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         database: configService.get<string>('DB_NAME', 'le-general'),
         // Automatically load entities from the specified directory
         autoLoadEntities: true, // Automatically load entities from the specified directory
-        synchronize: true, // Note: Set to false in production to avoid data loss
+        synchronize: false, // Note: Set to false in production to avoid data loss
       }),
     }),
+    // -> We have to here the modules that we want to use in our application
     UsersModule,
+    AuthModule,
     // Configure rate limiting with ThrottlerModule
     ThrottlerModule.forRoot({
       throttlers: [
