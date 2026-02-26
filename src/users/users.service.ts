@@ -57,7 +57,18 @@ export class UsersService {
     // Save the updated user to the database
     const saved = await this.usersRepository.save(user);
     const { passwordHash, ...safeUser } = saved;
-    return safeUser; // Return the updated user without the passwordHash for security reasons.
+
+    // Determine the success message based on what was updated
+    let message = '';
+    if (dto.email && dto.password) {
+      message = 'Email et mot de passe mis à jour avec succès.';
+    } else if (dto.email) {
+      message = 'Email mis à jour avec succès.';
+    } else if (dto.password) {
+      message = 'Mot de passe mis à jour avec succès.';
+    }
+
+    return { ...safeUser, message };
   } // Close update method
 
   async remove(id: number) {

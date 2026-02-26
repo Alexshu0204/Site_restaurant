@@ -8,10 +8,13 @@ import {
   Patch,
   UseGuards,
 } from '@nestjs/common';
+import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard as JwtAG } from 'src/auth/guards/jwt-auth.guard';
-import { UpdateUserDto, UpdateUserDto as UpUDto } from './dto/update-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 import { UsersService } from './users.service';
 
+@ApiTags('users') // This decorator is used to group the endpoints of this controller under the "users" tag in the Swagger documentation.
+@ApiBearerAuth() // This decorator is used to indicate that the endpoints of this controller require a bearer token for authentication in the Swagger documentation.
 @UseGuards(JwtAG)
 @Controller('users')
 export class UsersController {
@@ -28,10 +31,7 @@ export class UsersController {
   }
 
   @Patch(':id')
-  update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateUserDto,
-  ) { 
+  update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }
 

@@ -42,6 +42,7 @@ export class AuthService {
     // Save the new user to the database
     const savedUser = await this.usersRepository.save(user);
     return {
+      message: 'Vous êtes inscrit.',
       id: savedUser.id,
       email: savedUser.email,
     };
@@ -77,6 +78,7 @@ export class AuthService {
 
     // Return the access token to the client
     return {
+      message: 'Connexion réussie.',
       access_token: await this.jwtService.signAsync(payload),
     };
   } // Close login method
