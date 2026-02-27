@@ -1,0 +1,23 @@
+[33mcommit 86545c61e48cb98ef0ede4e4e50676bd98660ce1[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mSwagger_added_+_near_complete_security[m[33m, [m[1;31morigin/Swagger_added_+_near_complete_security[m[33m)[m
+Author: Alex SHU <shualex0204@gamil.com>
+Date:   Thu Feb 26 15:38:18 2026 +0100
+
+    continu Swagger_added_+_near_complete_security
+
+[33mcommit 24266cbbe1ebe31ea6f0871b8fa1972a7a22e6d7[m
+Author: Alex SHU <shualex0204@gamil.com>
+Date:   Wed Feb 25 18:04:50 2026 +0100
+
+    Swagger_added_+_near_complete_security
+
+[33mcommit 70ec63161de7b13f86bcc2f77c9f96a3396653ff[m[33m ([m[1;31morigin/feature/user-crud[m[33m, [m[1;32mfeature/user-crud[m[33m)[m
+Author: Alex SHU <shualex0204@gamil.com>
+Date:   Wed Feb 25 13:41:32 2026 +0100
+
+    setup: disable synchronize and add initial migration + user's CRUD complete
+
+[33mcommit 5657f5a958d488768da64e682ebe055eae80aa64[m[33m ([m[1;31morigin/main[m[33m, [m[1;32mmain[m[33m)[m
+Author: Alex SHU <shualex0204@gamil.com>
+Date:   Tue Feb 24 11:14:57 2026 +0100
+
+    Project initialization

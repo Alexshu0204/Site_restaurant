@@ -34,7 +34,10 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
       // application is configured correctly before it runs.
       
       validationSchema: Joi.object({
-        PORT: Joi.number().port().default(3001),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
+        PORT: Joi.number().port().default(3002),
         DB_HOST: Joi.string().hostname().default('127.0.0.1'),
         DB_PORT: Joi.number().port().default(5432),
         DB_USER: Joi.string().required(),
@@ -42,6 +45,7 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         DB_NAME: Joi.string().required(),
         JWT_SECRET: Joi.string().min(16).required(),
         JWT_EXPIRES_IN: Joi.string().required(),
+        ADMIN_EMAIL: Joi.string().email().optional(),
         TYPEORM_DEBUG: Joi.string()
           .valid('true', 'false', '1', '0', 'on', 'off')
           .default('false'),
@@ -54,6 +58,11 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService) => ({
+        // Environment-aware behavior
+        logging:
+          configService.get<string>('NODE_ENV', 'development') === 'development'
+            ? ['error', 'warn']
+            : false,
         // Database connection settings
         type: 'postgres',
         host: configService.get<string>('DB_HOST', '127.0.0.1'),

@@ -8,11 +8,13 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { UsersService } from './users.service';
 import { UsersController } from './users.controller';
+import { OwnerGuard } from './guards/owner.guard';
+import { RolesGuard } from 'src/auth/guards/roles.guard';
 
 @Module({
   imports: [TypeOrmModule.forFeature([User])], // makes User repository injectable into UsersService
   controllers: [UsersController],
-  providers: [UsersService],
+  providers: [UsersService, OwnerGuard, RolesGuard],
   exports: [UsersService], // Export UsersService to be used in other modules (like AuthModule)
 })
 export class UsersModule {}
