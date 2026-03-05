@@ -24,7 +24,7 @@ async function bootstrap() {
 
   // Enable CORS for specific origins and allow credentials
   app.enableCors({
-    origin: ['http://localhost:3002', 'http://localhost:5173'],
+    origin: ['http://localhost:3003', 'http://localhost:5173'],
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
   });
@@ -56,6 +56,6 @@ async function bootstrap() {
     SwaggerModule.setup('docs', app, document);
   }
 
-  await app.listen(process.env.PORT ?? 3002);
+  await app.listen(process.env.PORT ?? 3003);
 }
 void bootstrap();

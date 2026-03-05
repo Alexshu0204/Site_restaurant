@@ -37,7 +37,7 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
-        PORT: Joi.number().port().default(3002),
+        PORT: Joi.number().port().default(3003),
         DB_HOST: Joi.string().hostname().default('127.0.0.1'),
         DB_PORT: Joi.number().port().default(5432),
         DB_USER: Joi.string().required(),
@@ -46,6 +46,10 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         JWT_SECRET: Joi.string().min(16).required(),
         JWT_EXPIRES_IN: Joi.string().required(),
         ADMIN_EMAIL: Joi.string().email().optional(),
+        FRONTEND_URL: Joi.string().uri().optional(),
+        RESET_PASSWORD_URL: Joi.string().uri().optional(),
+        MAIL_FROM: Joi.string().email().allow('').optional(),
+        RESEND_API_KEY: Joi.string().allow('').optional(),
         TYPEORM_DEBUG: Joi.string()
           .valid('true', 'false', '1', '0', 'on', 'off')
           .default('false'),

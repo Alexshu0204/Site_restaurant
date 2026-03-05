@@ -78,8 +78,10 @@ export class AuthService {
     }
 
     // Determine role from environment-managed admin email (no DB schema change required).
+    const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+    const currentUserEmail = user.email?.trim().toLowerCase();
     const role =
-      process.env.ADMIN_EMAIL && process.env.ADMIN_EMAIL === user.email
+      configuredAdminEmail && configuredAdminEmail === currentUserEmail
         ? 'admin'
         : 'user';
 
@@ -112,19 +114,12 @@ export class AuthService {
       user.passwordResetTokenHash = tokenHash;
       user.passwordResetExpiresAt = expiresAt;
       await this.usersRepository.save(user);
-
-      // For MVP: log reset link in development only.
-      if (process.env.NODE_ENV === 'development') {
-        const frontendUrl = process.env.FRONTEND_URL ?? 'http://localhost:5173';
-        this.logger.log(
-          `Password reset link for ${user.email}: ${frontendUrl}/reset-password?token=${rawToken}`,
-        );
-      }
+      await this.sendPasswordResetEmail(user.email, rawToken);
     }
 
     return {
       message:
-        'Si un compte est associé à cet e-mail, un lien de réinitialisation a été envoyé.',
+        'Un lien de réinitialisation a été envoyé dans votre boîte de réception. Veuillez vérifier votre e-mail.',
     };
   }
 
@@ -157,5 +152,85 @@ export class AuthService {
   // Hash the reset token before persistence to avoid storing sensitive token material.
   private hashResetToken(token: string): string {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  // Send reset email via Resend when configured, or log link in development fallback.
+  private async sendPasswordResetEmail(
+    to: string,
+    token: string,
+  ): Promise<void> {
+    const resetBaseUrl =
+      process.env.RESET_PASSWORD_URL ??
+      process.env.FRONTEND_URL ??
+      'http://localhost:3003';
+    const resetLink = `${resetBaseUrl}/reset-password?token=${token}`;
+    const emailTemplate = this.buildPasswordResetEmail(resetLink);
+
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const mailFrom = process.env.MAIL_FROM;
+
+    if (!resendApiKey || !mailFrom) {
+      if (process.env.NODE_ENV === 'development') {
+        this.logger.log(`Password reset link for ${to}: ${resetLink}`);
+      } else {
+        this.logger.warn(
+          'Mail provider is not configured. Set RESEND_API_KEY and MAIL_FROM.',
+        );
+      }
+      return;
+    }
+
+    const response = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${resendApiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: mailFrom,
+        to: [to],
+        subject: emailTemplate.subject,
+        html: emailTemplate.html,
+        text: emailTemplate.text,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorBody = await response.text();
+      this.logger.error(`Resend API error: ${response.status} ${errorBody}`);
+    }
+  }
+
+  // Build a clear reset-password email with both HTML and plaintext versions.
+  private buildPasswordResetEmail(resetLink: string): {
+    subject: string;
+    html: string;
+    text: string;
+  } {
+    return {
+      subject: 'Réinitialisation de votre mot de passe',
+      html: `
+        <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111; max-width: 620px; margin: 0 auto;">
+          <h2 style="margin-bottom: 12px;">Réinitialisation du mot de passe</h2>
+          <p>Vous avez demandé une réinitialisation de votre mot de passe.</p>
+          <p>Ce lien est valide pendant <strong>15 minutes</strong>.</p>
+          <p style="margin: 24px 0;">
+            <a
+              href="${resetLink}"
+              style="background: #111; color: #fff; text-decoration: none; padding: 10px 16px; border-radius: 8px; display: inline-block;"
+            >
+              Réinitialiser mon mot de passe
+            </a>
+          </p>
+          <p>Si le bouton ne fonctionne pas, copiez-collez ce lien dans votre navigateur :</p>
+          <p><a href="${resetLink}">${resetLink}</a></p>
+          <hr style="margin: 24px 0; border: none; border-top: 1px solid #ddd;" />
+          <p style="color: #666; font-size: 12px;">
+            Si vous n'êtes pas à l'origine de cette demande, vous pouvez ignorer cet e-mail.
+          </p>
+        </div>
+      `,
+      text: `Réinitialisation du mot de passe\n\nVous avez demandé une réinitialisation de votre mot de passe.\nCe lien est valide pendant 15 minutes.\n\nLien: ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.`,
+    };
   }
 }
