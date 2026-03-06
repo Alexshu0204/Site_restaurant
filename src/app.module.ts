@@ -1,3 +1,8 @@
+// The AppModule is the root module of the NestJS application. It imports and configures
+// all the necessary modules, including the AuthModule for authentication, the UsersModule
+// for user management, and the ThrottlerModule for rate limiting. It also sets up global
+// guards and services that are used throughout the application.
+
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -45,6 +50,8 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         DB_NAME: Joi.string().required(),
         JWT_SECRET: Joi.string().min(16).required(),
         JWT_EXPIRES_IN: Joi.string().required(),
+        JWT_REFRESH_SECRET: Joi.string().min(16).optional(),
+        JWT_REFRESH_EXPIRES_IN: Joi.string().optional().default('7d'),
         ADMIN_EMAIL: Joi.string().email().optional(),
         FRONTEND_URL: Joi.string().uri().optional(),
         RESET_PASSWORD_URL: Joi.string().uri().optional(),

@@ -35,6 +35,23 @@ export class User {
   })
   passwordResetExpiresAt: Date | null;
 
+  // New fields for refresh token management
+
+  @Column({
+    name: 'refreshtokenhash',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
+  refreshTokenHash: string | null;
+
+  @Column({
+    name: 'refreshtokenexpiresat',
+    type: 'timestamp',
+    nullable: true,
+  })
+  refreshTokenExpiresAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

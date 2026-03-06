@@ -1,3 +1,9 @@
+// main.ts is the entry point of the NestJS application. It sets up the application with
+// various security measures, including Helmet for HTTP headers security, CORS
+// configuration, and global validation pipes. It also conditionally sets up Swagger
+// API documentation in development mode. Finally, it starts the application on the
+// specified port.
+
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import helmet from 'helmet';
@@ -19,6 +25,22 @@ async function bootstrap() {
     helmet({
       // Allow cross-origin resource sharing for images and other media
       crossOriginResourcePolicy: { policy: 'cross-origin' },
+      // Set a strict Content Security Policy to mitigate XSS and data injection attacks
+      contentSecurityPolicy: {
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+          formAction: ["'self'"],
+        },
+      },
+      referrerPolicy: { policy: 'no-referrer' },
     }),
   );
 
@@ -40,6 +62,33 @@ async function bootstrap() {
   );
 
   if (isDevelopment) {
+    // Apply a more relaxed Content Security Policy for the Swagger UI in development
+    // to allow inline scripts and styles.
+
+    // how it works ? The Helmet middleware is applied specifically to the '/docs'
+    // route, which serves the Swagger UI. This allows us to have a stricter Content
+    // Security Policy for the rest of the application while relaxing it for the API
+    // documentation interface, which may require inline scripts and styles to
+    // function properly.
+
+    app.use(
+      '/docs',
+      helmet.contentSecurityPolicy({
+        useDefaults: true,
+        directives: {
+          defaultSrc: ["'self'"],
+          scriptSrc: ["'self'", "'unsafe-inline'"],
+          styleSrc: ["'self'", "'unsafe-inline'"],
+          imgSrc: ["'self'", 'data:', 'https:'],
+          connectSrc: ["'self'"],
+          objectSrc: ["'none'"],
+          baseUri: ["'self'"],
+          frameAncestors: ["'none'"],
+          formAction: ["'self'"],
+        },
+      }),
+    );
+
     // Swagger API documentation setup
     const config = new DocumentBuilder()
       .setTitle('Le Général API')

@@ -10,12 +10,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 // We use argon2 for secure password hashing, which is a modern and secure hashing algorithm
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
+import ms, { StringValue } from 'ms';
 import { MoreThan, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 // The AuthService is responsible for handling user registration and login logic.
 @Injectable()
@@ -27,6 +29,40 @@ export class AuthService {
     private readonly usersRepository: Repository<User>,
     private readonly jwtService: JwtService, // Injecting JwtService for token generation
   ) {}
+
+  private getRefreshSecret(): string {
+    return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
+  }
+
+  private getRefreshExpiresIn(): StringValue {
+    return (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d') as StringValue;
+  }
+
+  private getRefreshExpiresAt(): Date {
+    const expiresIn = this.getRefreshExpiresIn();
+    const ttlMs = ms(expiresIn);
+    return new Date(Date.now() + ttlMs);
+  }
+
+  private async issueTokens(user: User, role: string) {
+    const payload = {
+      sub: user.id,
+      email: user.email,
+      role,
+    };
+
+    const accessToken = await this.jwtService.signAsync(payload);
+    const refreshToken = await this.jwtService.signAsync(payload, {
+      secret: this.getRefreshSecret(),
+      expiresIn: this.getRefreshExpiresIn(),
+    });
+
+    user.refreshTokenHash = await argon2.hash(refreshToken);
+    user.refreshTokenExpiresAt = this.getRefreshExpiresAt();
+    await this.usersRepository.save(user);
+
+    return { accessToken, refreshToken };
+  }
 
   // Method to handle user registration
   async register(dto: RegisterDto) {
@@ -85,18 +121,13 @@ export class AuthService {
         ? 'admin'
         : 'user';
 
-    // Generate a JWT token for the authenticated user
-    const payload = {
-      sub: user.id, // It's the unique identifier for the user, often the user ID
-      email: user.email,
-      role,
-    };
+    const tokens = await this.issueTokens(user, role);
 
-    // Return the access token to the client
     return {
       message: 'Connexion réussie.',
       role,
-      access_token: await this.jwtService.signAsync(payload),
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
     };
   } // Close login method
 
@@ -144,6 +175,8 @@ export class AuthService {
     user.passwordHash = await argon2.hash(dto.newPassword);
     user.passwordResetTokenHash = null;
     user.passwordResetExpiresAt = null;
+    user.refreshTokenHash = null;
+    user.refreshTokenExpiresAt = null;
     await this.usersRepository.save(user);
 
     return { message: 'Mot de passe réinitialisé avec succès.' };
@@ -232,5 +265,81 @@ export class AuthService {
       `,
       text: `Réinitialisation du mot de passe\n\nVous avez demandé une réinitialisation de votre mot de passe.\nCe lien est valide pendant 15 minutes.\n\nLien: ${resetLink}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.`,
     };
+  }
+
+  async refreshTokens(
+    dto: RefreshTokenDto,
+  ): Promise<{ message: string; access_token: string; refresh_token: string }> {
+    const refreshSecret = this.getRefreshSecret();
+    if (!refreshSecret) {
+      throw new UNAE('Refresh token non configuré.');
+    }
+
+    let payload: { sub: number; email: string; role?: string };
+    try {
+      payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+        secret: refreshSecret,
+      });
+    } catch {
+      throw new UNAE('Refresh token invalide ou expiré.');
+    }
+
+    const user = await this.usersRepository.findOne({
+      where: { id: payload.sub },
+    });
+
+    if (!user || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
+      throw new UNAE('Refresh token invalide ou expiré.');
+    }
+
+    if (user.refreshTokenExpiresAt <= new Date()) {
+      throw new UNAE('Refresh token invalide ou expiré.');
+    }
+
+    const isRefreshValid = await argon2.verify(
+      user.refreshTokenHash,
+      dto.refreshToken,
+    );
+    if (!isRefreshValid) {
+      throw new UNAE('Refresh token invalide ou expiré.');
+    }
+
+    const role = payload.role ?? 'user';
+    const tokens = await this.issueTokens(user, role);
+
+    return {
+      message: 'Session renouvelée.',
+      access_token: tokens.accessToken,
+      refresh_token: tokens.refreshToken,
+    };
+  }
+
+  async logout(dto: RefreshTokenDto): Promise<{ message: string }> {
+    const refreshSecret = this.getRefreshSecret();
+    if (!refreshSecret) {
+      return { message: 'Déconnexion réussie.' };
+    }
+
+    try {
+      const payload = await this.jwtService.verifyAsync<{
+        sub: number;
+      }>(dto.refreshToken, {
+        secret: refreshSecret,
+      });
+
+      const user = await this.usersRepository.findOne({
+        where: { id: payload.sub },
+      });
+
+      if (user) {
+        user.refreshTokenHash = null;
+        user.refreshTokenExpiresAt = null;
+        await this.usersRepository.save(user);
+      }
+    } catch {
+      // Keep logout idempotent and avoid leaking token validity.
+    }
+
+    return { message: 'Déconnexion réussie.' };
   }
 }

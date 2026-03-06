@@ -11,5 +11,7 @@ export default new DataSource({
   password: process.env.DB_PASSWORD ?? 'postgres',
   database: process.env.DB_NAME ?? 'le-general',
   entities: [User],
-  synchronize: true,
+  migrations: ['src/database/migrations/*.ts'],
+  synchronize: false, // Note: Set to true for development, but should
+  // be false in production to avoid data loss
 });
