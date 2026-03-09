@@ -4,7 +4,7 @@ import {
   NotFoundException as NFE, // This exception is thrown when a requested resource is not found, such as when trying to find a user that does not exist.
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Raw, Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { User } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -15,6 +15,10 @@ export class UsersService {
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
   ) {}
+
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
 
   async findAll() {
     const users = await this.usersRepository.find({ order: { id: 'ASC' } });
@@ -39,14 +43,20 @@ export class UsersService {
 
     // If the email is being updated, check if the new email is already in use by another user
     if (dto.email && dto.email !== user.email) {
+      const normalizedEmail = this.normalizeEmail(dto.email);
+
       const existing = await this.usersRepository.findOne({
         // We check if there is another user with the same email, excluding the current user
-        where: { email: dto.email },
+        where: {
+          email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
+            email: normalizedEmail,
+          }),
+        },
       });
       if (existing) {
         throw new ConflictException("L'adresse e-mail est déjà utilisée.");
       }
-      user.email = dto.email;
+      user.email = normalizedEmail;
     } // close email conflict check
 
     // If the password is being updated, hash the new password

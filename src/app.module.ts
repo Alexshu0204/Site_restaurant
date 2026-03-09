@@ -52,7 +52,6 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         JWT_EXPIRES_IN: Joi.string().required(),
         JWT_REFRESH_SECRET: Joi.string().min(16).optional(),
         JWT_REFRESH_EXPIRES_IN: Joi.string().optional().default('7d'),
-        ADMIN_EMAIL: Joi.string().email().optional(),
         FRONTEND_URL: Joi.string().uri().optional(),
         RESET_PASSWORD_URL: Joi.string().uri().optional(),
         MAIL_FROM: Joi.string().email().allow('').optional(),

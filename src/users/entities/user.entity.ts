@@ -21,6 +21,13 @@ export class User {
   passwordHash: string;
 
   @Column({
+    type: 'varchar',
+    length: 20,
+    default: 'user',
+  })
+  role: 'user' | 'admin';
+
+  @Column({
     name: 'passwordresettokenhash',
     type: 'varchar',
     length: 255,

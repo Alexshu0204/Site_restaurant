@@ -11,7 +11,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import ms, { StringValue } from 'ms';
-import { MoreThan, Repository } from 'typeorm';
+import { MoreThan, Raw, Repository } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -30,20 +30,32 @@ export class AuthService {
     private readonly jwtService: JwtService, // Injecting JwtService for token generation
   ) {}
 
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
+  }
+
+  // Helper methods to manage refresh token configuration and expiration logic.
   private getRefreshSecret(): string {
     return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
   }
 
+  // The refresh token expiration is calculated based on the current time plus the configured
+  // TTL, which allows for flexible session management.
   private getRefreshExpiresIn(): StringValue {
     return (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d') as StringValue;
   }
 
+  // This method calculates the exact expiration date for a refresh token based on the configured TTL.
   private getRefreshExpiresAt(): Date {
     const expiresIn = this.getRefreshExpiresIn();
     const ttlMs = ms(expiresIn);
     return new Date(Date.now() + ttlMs);
   }
 
+  // The issueTokens method generates both access and refresh tokens for a user. The access token 
+  // is signed with the main JWT secret, while the refresh token is signed with a separate secret 
+  // to enhance security. The refresh token is hashed and stored in the database along with its 
+  // expiration time, allowing for secure session management and token revocation if needed.
   private async issueTokens(user: User, role: string) {
     const payload = {
       sub: user.id,
@@ -66,9 +78,15 @@ export class AuthService {
 
   // Method to handle user registration
   async register(dto: RegisterDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
+
     // Check if a user with the provided email already exists
     const existingUser = await this.usersRepository.findOne({
-      where: { email: dto.email },
+      where: {
+        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
+          email: normalizedEmail,
+        }),
+      },
     });
 
     if (existingUser) {
@@ -78,8 +96,9 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     const user = this.usersRepository.create({
-      email: dto.email,
+      email: normalizedEmail,
       passwordHash,
+      role: 'user',
     });
 
     // Save the new user to the database
@@ -93,8 +112,14 @@ export class AuthService {
 
   // Method to handle user login
   async login(dto: LoginDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
+
     const user = await this.usersRepository.findOne({
-      where: { email: dto.email },
+      where: {
+        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
+          email: normalizedEmail,
+        }),
+      },
     });
 
     if (!user) {
@@ -113,13 +138,7 @@ export class AuthService {
       );
     }
 
-    // Determine role from environment-managed admin email (no DB schema change required).
-    const configuredAdminEmail = process.env.ADMIN_EMAIL?.trim().toLowerCase();
-    const currentUserEmail = user.email?.trim().toLowerCase();
-    const role =
-      configuredAdminEmail && configuredAdminEmail === currentUserEmail
-        ? 'admin'
-        : 'user';
+    const role = user.role ?? 'user'; // Default to 'user' role if not set
 
     const tokens = await this.issueTokens(user, role);
 
@@ -133,8 +152,14 @@ export class AuthService {
 
   // Handle forgot-password without leaking whether the email exists (anti-enumeration).
   async forgotPassword(dto: ForgotPasswordDto) {
+    const normalizedEmail = this.normalizeEmail(dto.email);
+
     const user = await this.usersRepository.findOne({
-      where: { email: dto.email },
+      where: {
+        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
+          email: normalizedEmail,
+        }),
+      },
     });
 
     if (user) {
@@ -172,6 +197,7 @@ export class AuthService {
       );
     }
 
+    // Update the user's password and clear reset token fields to prevent reuse. Also invalidate refresh tokens.
     user.passwordHash = await argon2.hash(dto.newPassword);
     user.passwordResetTokenHash = null;
     user.passwordResetExpiresAt = null;
@@ -304,7 +330,7 @@ export class AuthService {
       throw new UNAE('Refresh token invalide ou expiré.');
     }
 
-    const role = payload.role ?? 'user';
+    const role = user.role ?? 'user';
     const tokens = await this.issueTokens(user, role);
 
     return {

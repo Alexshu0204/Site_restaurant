@@ -25,7 +25,7 @@ export class AppController {
   <body>
     <main class="card">
       <h1>Réinitialiser votre mot de passe</h1>
-      <p>Choisissez un nouveau mot de passe (recommandation CNIL) et validez.</p>
+      <p>Choisissez un nouveau mot de passe et validez.</p>
       <form id="reset-form">
         <label for="newPassword">Nouveau mot de passe</label>
         <input
