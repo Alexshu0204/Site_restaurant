@@ -77,6 +77,42 @@ $ npm run test:e2e
 $ npm run test:cov
 ```
 
+## Security and Testing Report (Stage)
+
+This backend was hardened progressively with security-first auth features.
+
+- JWT auth with access token + refresh token rotation
+- Password reset flow with anti-enumeration and single-use token logic
+- Argon2 hashing for passwords and refresh tokens
+- Progressive account lockout and failed-attempt reset window
+- Security event audit trail (`security_events`)
+- Helmet + strict CSP + restricted Swagger exposure (development only)
+- Config validation (`Joi`) and environment-driven anti-abuse policy knobs
+
+Unit test status:
+
+- `src/auth/auth.service.spec.ts`: login lockout, refresh rotation, forgot/reset, invalid token scenarios
+- `src/users/users.service.spec.ts`: sanitization, update conflict, password update hashing, deletion
+- `src/users/users.controller.spec.ts`: controller-to-service delegation checks
+
+Run key suites:
+
+```bash
+npm test -- auth/auth.service.spec.ts
+npm test -- users/users.service.spec.ts users/users.controller.spec.ts
+```
+
+## Production Checklist
+
+- Use a managed secret store (Vault/KMS/Cloud Secret Manager) for JWT and mail secrets.
+- Enforce secret rotation policy and keep `JWT_REFRESH_PREVIOUS_SECRETS` only for short migration windows.
+- Keep `.env` out of source control (already covered by `.gitignore`) and restrict host-level access.
+- Put API behind edge protection (WAF/CDN/reverse proxy rate limiting) for DDoS resilience.
+- Keep Swagger disabled outside development environments.
+- Monitor `security_events` and alert on spikes (`FAILED_BAD_PASSWORD`, `FAILED_INVALID_TOKEN`).
+- Define and document retention windows for auth/security logs (RGPD/CNIL minimization).
+- Back up database securely and test restore procedures.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
