@@ -25,7 +25,15 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
-  private readonly failedAttemptResetWindowMs = 30 * 60 * 1000;
+  private readonly failedAttemptResetWindowMs: number;
+  private readonly lockoutTier1Attempts: number;
+  private readonly lockoutTier1Minutes: number;
+  private readonly lockoutTier2Attempts: number;
+  private readonly lockoutTier2Minutes: number;
+  private readonly lockoutTier3Attempts: number;
+  private readonly lockoutTier3Minutes: number;
+  private readonly lockoutTier4Attempts: number;
+  private readonly lockoutTier4Minutes: number;
 
   constructor(
     @InjectRepository(User)
@@ -34,7 +42,56 @@ export class AuthService {
     private readonly securityEventRepository: Repository<SecurityEvent>,
     private readonly configService: ConfigService,
     private readonly jwtService: JwtService, // Injecting JwtService for token generation
-  ) {}
+  ) {
+    // 🕐​ Load lockout and security configuration from environment variables with sensible defaults.
+    this.failedAttemptResetWindowMs = this.getConfigPositiveInt(
+      'AUTH_FAILED_ATTEMPT_RESET_WINDOW_MS',
+      30 * 60 * 1000,
+    );
+    this.lockoutTier1Attempts = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER1_ATTEMPTS',
+      10,
+    );
+    this.lockoutTier1Minutes = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER1_MINUTES',
+      5,
+    );
+    this.lockoutTier2Attempts = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER2_ATTEMPTS',
+      15,
+    );
+    this.lockoutTier2Minutes = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER2_MINUTES',
+      10,
+    );
+    this.lockoutTier3Attempts = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER3_ATTEMPTS',
+      20,
+    );
+    this.lockoutTier3Minutes = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER3_MINUTES',
+      60,
+    );
+    this.lockoutTier4Attempts = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER4_ATTEMPTS',
+      30,
+    );
+    this.lockoutTier4Minutes = this.getConfigPositiveInt(
+      'AUTH_LOCKOUT_TIER4_MINUTES',
+      300,
+    );
+  }
+
+  // Helper method to retrieve positive integer configuration values with validation and fallback.
+  private getConfigPositiveInt(key: string, fallback: number): number {
+    const value = this.configService.get<number>(key);
+
+    if (!Number.isFinite(value) || value === undefined || value <= 0) {
+      return fallback;
+    }
+
+    return Math.floor(value);
+  }
 
   // Helper method to log security events such as login attempts, password reset requests, and token refreshes.
   // This method creates a new SecurityEvent entity and saves it to the database, allowing for auditing and monitoring of security-related activities.
@@ -58,20 +115,20 @@ export class AuthService {
   // increasing lockout times for repeated failures to enhance security.
 
   private getLockoutUntil(attempts: number): Date | null {
-    if (attempts < 10) {
+    if (attempts < this.lockoutTier1Attempts) {
       return null;
     }
 
     let lockMinutes = 0;
 
-    if (attempts >= 30) {
-      lockMinutes = 300;
-    } else if (attempts >= 20) {
-      lockMinutes = 60;
-    } else if (attempts >= 15) {
-      lockMinutes = 10;
-    } else if (attempts >= 10) {
-      lockMinutes = 5;
+    if (attempts >= this.lockoutTier4Attempts) {
+      lockMinutes = this.lockoutTier4Minutes;
+    } else if (attempts >= this.lockoutTier3Attempts) {
+      lockMinutes = this.lockoutTier3Minutes;
+    } else if (attempts >= this.lockoutTier2Attempts) {
+      lockMinutes = this.lockoutTier2Minutes;
+    } else if (attempts >= this.lockoutTier1Attempts) {
+      lockMinutes = this.lockoutTier1Minutes;
     }
 
     const msInAMinute = 60 * 1000;

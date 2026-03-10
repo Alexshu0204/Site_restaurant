@@ -53,6 +53,33 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         JWT_REFRESH_SECRET: Joi.string().min(16).required(),
         JWT_REFRESH_PREVIOUS_SECRETS: Joi.string().allow('').optional(),
         JWT_REFRESH_EXPIRES_IN: Joi.string().optional().default('7d'),
+        AUTH_LOGIN_THROTTLE_LIMIT: Joi.number().integer().min(1).default(20),
+        AUTH_LOGIN_THROTTLE_TTL_MS: Joi.number()
+          .integer()
+          .min(1)
+          .default(60_000),
+        AUTH_FORGOT_THROTTLE_LIMIT: Joi.number().integer().min(1).default(5),
+        AUTH_FORGOT_THROTTLE_TTL_MS: Joi.number()
+          .integer()
+          .min(1)
+          .default(60_000),
+        AUTH_REFRESH_THROTTLE_LIMIT: Joi.number().integer().min(1).default(10),
+        AUTH_REFRESH_THROTTLE_TTL_MS: Joi.number()
+          .integer()
+          .min(1)
+          .default(60_000),
+        AUTH_FAILED_ATTEMPT_RESET_WINDOW_MS: Joi.number()
+          .integer()
+          .min(1)
+          .default(1_800_000),
+        AUTH_LOCKOUT_TIER1_ATTEMPTS: Joi.number().integer().min(1).default(10),
+        AUTH_LOCKOUT_TIER1_MINUTES: Joi.number().integer().min(1).default(5),
+        AUTH_LOCKOUT_TIER2_ATTEMPTS: Joi.number().integer().min(1).default(15),
+        AUTH_LOCKOUT_TIER2_MINUTES: Joi.number().integer().min(1).default(10),
+        AUTH_LOCKOUT_TIER3_ATTEMPTS: Joi.number().integer().min(1).default(20),
+        AUTH_LOCKOUT_TIER3_MINUTES: Joi.number().integer().min(1).default(60),
+        AUTH_LOCKOUT_TIER4_ATTEMPTS: Joi.number().integer().min(1).default(30),
+        AUTH_LOCKOUT_TIER4_MINUTES: Joi.number().integer().min(1).default(300),
         FRONTEND_URL: Joi.string().uri().optional(),
         RESET_PASSWORD_URL: Joi.string().uri().optional(),
         MAIL_FROM: Joi.string().email().allow('').optional(),

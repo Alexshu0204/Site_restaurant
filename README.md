@@ -31,6 +31,26 @@
 $ npm install
 ```
 
+## Auth security policy (env)
+
+The API supports environment-based tuning for auth anti-abuse behavior.
+
+- `AUTH_LOGIN_THROTTLE_LIMIT` (default: `20`)
+- `AUTH_LOGIN_THROTTLE_TTL_MS` (default: `60000`)
+- `AUTH_FORGOT_THROTTLE_LIMIT` (default: `5`)
+- `AUTH_FORGOT_THROTTLE_TTL_MS` (default: `60000`)
+- `AUTH_REFRESH_THROTTLE_LIMIT` (default: `10`)
+- `AUTH_REFRESH_THROTTLE_TTL_MS` (default: `60000`)
+- `AUTH_FAILED_ATTEMPT_RESET_WINDOW_MS` (default: `1800000`)
+- `AUTH_LOCKOUT_TIER1_ATTEMPTS` (default: `10`)
+- `AUTH_LOCKOUT_TIER1_MINUTES` (default: `5`)
+- `AUTH_LOCKOUT_TIER2_ATTEMPTS` (default: `15`)
+- `AUTH_LOCKOUT_TIER2_MINUTES` (default: `10`)
+- `AUTH_LOCKOUT_TIER3_ATTEMPTS` (default: `20`)
+- `AUTH_LOCKOUT_TIER3_MINUTES` (default: `60`)
+- `AUTH_LOCKOUT_TIER4_ATTEMPTS` (default: `30`)
+- `AUTH_LOCKOUT_TIER4_MINUTES` (default: `300`)
+
 ## Compile and run the project
 
 ```bash
