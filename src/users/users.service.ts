@@ -4,7 +4,7 @@ import {
   NotFoundException as NFE, // This exception is thrown when a requested resource is not found, such as when trying to find a user that does not exist.
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Raw, Repository } from 'typeorm';
+import { Repository } from 'typeorm';
 import * as argon2 from 'argon2';
 import { User } from './entities/user.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -16,13 +16,21 @@ export class UsersService {
     private readonly usersRepository: Repository<User>,
   ) {}
 
-  private normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
+  // This method is used to sanitize the user object before sending it in a response, by removing
+  // sensitive information such as the password hash.
+
+  private sanitizeUser(user: User) {
+    return {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      createdAt: user.createdAt,
+    };
   }
 
   async findAll() {
     const users = await this.usersRepository.find({ order: { id: 'ASC' } });
-    return users.map(({ passwordHash, ...user }) => user);
+    return users.map((user) => this.sanitizeUser(user));
   }
 
   async findOne(id: number) {
@@ -31,8 +39,7 @@ export class UsersService {
       throw new NFE('Aucun utilisateur trouvé.');
     }
 
-    const { passwordHash, ...safeUser } = user;
-    return safeUser; // safeUser is the user object without the passwordHash, which we do not want to return for security reasons.
+    return this.sanitizeUser(user);
   } // Close findOne method
 
   async update(id: number, dto: UpdateUserDto) {
@@ -43,20 +50,14 @@ export class UsersService {
 
     // If the email is being updated, check if the new email is already in use by another user
     if (dto.email && dto.email !== user.email) {
-      const normalizedEmail = this.normalizeEmail(dto.email);
-
       const existing = await this.usersRepository.findOne({
         // We check if there is another user with the same email, excluding the current user
-        where: {
-          email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
-            email: normalizedEmail,
-          }),
-        },
+        where: { email: dto.email },
       });
       if (existing) {
         throw new ConflictException("L'adresse e-mail est déjà utilisée.");
       }
-      user.email = normalizedEmail;
+      user.email = dto.email;
     } // close email conflict check
 
     // If the password is being updated, hash the new password
@@ -66,7 +67,7 @@ export class UsersService {
     
     // Save the updated user to the database
     const saved = await this.usersRepository.save(user);
-    const { passwordHash, ...safeUser } = saved;
+    const safeUser = this.sanitizeUser(saved);
 
     // Determine the success message based on what was updated
     let message = '';

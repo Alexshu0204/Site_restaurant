@@ -5,6 +5,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { StringValue } from 'ms';
 import { User } from '../users/entities/user.entity';
+import { SecurityEvent } from './entities/security-event.entity';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
@@ -15,7 +16,7 @@ import { JwtStrategy } from './strategies/jwt.strategy';
   imports: [
     ConfigModule,
     PassportModule,
-    TypeOrmModule.forFeature([User]),
+    TypeOrmModule.forFeature([User, SecurityEvent]),
     // The JwtModule is configured asynchronously to allow the use of ConfigService for retrieving
     // the JWT secret and expiration time from environment variables. This ensures that sensitive
     // information is not hardcoded and can be easily managed through configuration.

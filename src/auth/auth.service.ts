@@ -5,13 +5,15 @@ import {
   Logger,
   UnauthorizedException as UNAE,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 // We use argon2 for secure password hashing, which is a modern and secure hashing algorithm
 import * as argon2 from 'argon2';
 import { createHash, randomBytes } from 'crypto';
 import ms, { StringValue } from 'ms';
-import { MoreThan, Raw, Repository } from 'typeorm';
+import { MoreThan, Repository } from 'typeorm';
+import { SecurityEvent } from './entities/security-event.entity';
 import { User } from '../users/entities/user.entity';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -23,26 +25,101 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly failedAttemptResetWindowMs = 30 * 60 * 1000;
 
   constructor(
     @InjectRepository(User)
     private readonly usersRepository: Repository<User>,
+    @InjectRepository(SecurityEvent)
+    private readonly securityEventRepository: Repository<SecurityEvent>,
+    private readonly configService: ConfigService,
     private readonly jwtService: JwtService, // Injecting JwtService for token generation
   ) {}
 
-  private normalizeEmail(email: string): string {
-    return email.trim().toLowerCase();
+  // Helper method to log security events such as login attempts, password reset requests, and token refreshes.
+  // This method creates a new SecurityEvent entity and saves it to the database, allowing for auditing and monitoring of security-related activities.
+  private async logSecurityEvent(
+    type: string,
+    email: string | null,
+    outcome: string,
+    metadata?: string,
+  ): Promise<void> {
+    const event = this.securityEventRepository.create({
+      type,
+      email,
+      outcome,
+      metadata: metadata ?? null,
+    });
+    await this.securityEventRepository.save(event);
+  }
+
+  // Lockout logic to determine how long an account should be locked after a certain number of failed login
+  // attempts.This method calculates the lockout duration based on the number of failed attempts, providing
+  // increasing lockout times for repeated failures to enhance security.
+
+  private getLockoutUntil(attempts: number): Date | null {
+    if (attempts < 10) {
+      return null;
+    }
+
+    let lockMinutes = 0;
+
+    if (attempts >= 30) {
+      lockMinutes = 300;
+    } else if (attempts >= 20) {
+      lockMinutes = 60;
+    } else if (attempts >= 15) {
+      lockMinutes = 10;
+    } else if (attempts >= 10) {
+      lockMinutes = 5;
+    }
+
+    const msInAMinute = 60 * 1000;
+    return new Date(Date.now() + lockMinutes * msInAMinute);
+  }
+
+  // This method checks if the failed login attempts should be reset based on the time elapsed since the
+  // last failed attempt.
+  private shouldResetFailedAttempts(user: User): boolean {
+    if (!user.lastFailedLoginAt) {
+      return false;
+    }
+
+    const elapsedMs = Date.now() - user.lastFailedLoginAt.getTime();
+    return elapsedMs >= this.failedAttemptResetWindowMs;
   }
 
   // Helper methods to manage refresh token configuration and expiration logic.
   private getRefreshSecret(): string {
-    return process.env.JWT_REFRESH_SECRET ?? process.env.JWT_SECRET ?? '';
+    return this.configService.getOrThrow<string>('JWT_REFRESH_SECRET');
+  }
+
+  private getPreviousRefreshSecrets(): string[] {
+    const raw = this.configService.get<string>(
+      'JWT_REFRESH_PREVIOUS_SECRETS',
+      '',
+    );
+    return raw
+      .split(',')
+      .map((secret) => secret.trim())
+      .filter((secret) => secret.length > 0);
   }
 
   // The refresh token expiration is calculated based on the current time plus the configured
   // TTL, which allows for flexible session management.
   private getRefreshExpiresIn(): StringValue {
-    return (process.env.JWT_REFRESH_EXPIRES_IN ?? '7d') as StringValue;
+    return this.configService.get<StringValue>(
+      'JWT_REFRESH_EXPIRES_IN',
+      '7d' as StringValue,
+    );
+  }
+
+  private getResetBaseUrl(): string {
+    return (
+      this.configService.get<string>('RESET_PASSWORD_URL') ??
+      this.configService.get<string>('FRONTEND_URL') ??
+      'http://localhost:3003'
+    );
   }
 
   // This method calculates the exact expiration date for a refresh token based on the configured TTL.
@@ -52,10 +129,9 @@ export class AuthService {
     return new Date(Date.now() + ttlMs);
   }
 
-  // The issueTokens method generates both access and refresh tokens for a user. The access token 
-  // is signed with the main JWT secret, while the refresh token is signed with a separate secret 
-  // to enhance security. The refresh token is hashed and stored in the database along with its 
-  // expiration time, allowing for secure session management and token revocation if needed.
+  // This method issues both access and refresh tokens for a user, and updates the user's
+  // refresh token hash and expiration time in the database. This allows for secure session
+  // management and token revocation if needed.
   private async issueTokens(user: User, role: string) {
     const payload = {
       sub: user.id,
@@ -78,15 +154,9 @@ export class AuthService {
 
   // Method to handle user registration
   async register(dto: RegisterDto) {
-    const normalizedEmail = this.normalizeEmail(dto.email);
-
     // Check if a user with the provided email already exists
     const existingUser = await this.usersRepository.findOne({
-      where: {
-        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
-          email: normalizedEmail,
-        }),
-      },
+      where: { email: dto.email },
     });
 
     if (existingUser) {
@@ -96,7 +166,7 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     const user = this.usersRepository.create({
-      email: normalizedEmail,
+      email: dto.email,
       passwordHash,
       role: 'user',
     });
@@ -112,19 +182,38 @@ export class AuthService {
 
   // Method to handle user login
   async login(dto: LoginDto) {
-    const normalizedEmail = this.normalizeEmail(dto.email);
-
     const user = await this.usersRepository.findOne({
-      where: {
-        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
-          email: normalizedEmail,
-        }),
-      },
+      where: { email: dto.email },
     });
 
     if (!user) {
+      await this.logSecurityEvent('LOGIN', dto.email, 'FAILED_NO_USER');
       throw new UNAE(
         'La connexion a échoué. Veuillez vérifier vos identifiants.',
+      );
+    }
+
+    // Check if we should reset failed attempts based on the time elapsed since the last failed login.
+    if (this.shouldResetFailedAttempts(user)) {
+      user.failedLoginAttempts = 0;
+      user.loginLockedUntil = null;
+      user.lastFailedLoginAt = null;
+      await this.usersRepository.save(user);
+
+      await this.logSecurityEvent('LOGIN_COUNTER', user.email, 'RESET_WINDOW');
+    }
+
+    // Check if the account is currently locked due to too many failed login attempts
+
+    if (user.loginLockedUntil && user.loginLockedUntil > new Date()) {
+      await this.logSecurityEvent(
+        'LOGIN',
+        user.email,
+        'FAILED_LOCKED',
+        `locked_until=${user.loginLockedUntil.toISOString()}`,
+      );
+      throw new UNAE(
+        'Compte temporairement verrouillé après plusieurs tentatives. Réessayez plus tard.',
       );
     }
 
@@ -133,12 +222,33 @@ export class AuthService {
       dto.password,
     );
     if (!IsPasswordValid) {
+      // Increment failed login attempts and set lockout time if necessary, then log the failed attempt
+      // with details for monitoring.
+
+      user.failedLoginAttempts += 1;
+      user.lastFailedLoginAt = new Date();
+      user.loginLockedUntil = this.getLockoutUntil(user.failedLoginAttempts);
+      await this.usersRepository.save(user);
+
+      await this.logSecurityEvent(
+        'LOGIN',
+        user.email,
+        'FAILED_BAD_PASSWORD',
+        `attempts=${user.failedLoginAttempts}`,
+      );
       throw new UNAE(
         'La connexion a échoué. Veuillez vérifier vos identifiants.',
       );
     }
 
+    // On successful login, reset failed attempts and log the successful login event with user role information.
     const role = user.role ?? 'user'; // Default to 'user' role if not set
+
+    user.failedLoginAttempts = 0;
+    user.loginLockedUntil = null;
+    user.lastFailedLoginAt = null;
+    await this.usersRepository.save(user);
+    await this.logSecurityEvent('LOGIN', user.email, 'SUCCESS', `role=${role}`);
 
     const tokens = await this.issueTokens(user, role);
 
@@ -152,16 +262,12 @@ export class AuthService {
 
   // Handle forgot-password without leaking whether the email exists (anti-enumeration).
   async forgotPassword(dto: ForgotPasswordDto) {
-    const normalizedEmail = this.normalizeEmail(dto.email);
-
     const user = await this.usersRepository.findOne({
-      where: {
-        email: Raw((alias) => `LOWER(${alias}) = LOWER(:email)`, {
-          email: normalizedEmail,
-        }),
-      },
+      where: { email: dto.email },
     });
 
+    // If the user exists, generate a reset token, save its hash and expiration, and send the reset email.
+    // If the user does not exist, we still log the event for monitoring but do not indicate this to the requester.
     if (user) {
       const rawToken = randomBytes(32).toString('hex');
       const tokenHash = this.hashResetToken(rawToken);
@@ -171,6 +277,19 @@ export class AuthService {
       user.passwordResetExpiresAt = expiresAt;
       await this.usersRepository.save(user);
       await this.sendPasswordResetEmail(user.email, rawToken);
+
+      // Log the password reset request event, indicating that a token was issued for the user.
+      await this.logSecurityEvent(
+        'PASSWORD_RESET_REQUEST',
+        user.email,
+        'ISSUED',
+      );
+    } else {
+      await this.logSecurityEvent(
+        'PASSWORD_RESET_REQUEST',
+        dto.email,
+        'NO_USER',
+      );
     }
 
     return {
@@ -205,6 +324,8 @@ export class AuthService {
     user.refreshTokenExpiresAt = null;
     await this.usersRepository.save(user);
 
+    await this.logSecurityEvent('PASSWORD_RESET', user.email, 'SUCCESS');
+
     return { message: 'Mot de passe réinitialisé avec succès.' };
   }
 
@@ -218,18 +339,18 @@ export class AuthService {
     to: string,
     token: string,
   ): Promise<void> {
-    const resetBaseUrl =
-      process.env.RESET_PASSWORD_URL ??
-      process.env.FRONTEND_URL ??
-      'http://localhost:3003';
+    const resetBaseUrl = this.getResetBaseUrl();
     const resetLink = `${resetBaseUrl}/reset-password?token=${token}`;
     const emailTemplate = this.buildPasswordResetEmail(resetLink);
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const mailFrom = process.env.MAIL_FROM;
+    const resendApiKey = this.configService.get<string>('RESEND_API_KEY');
+    const mailFrom = this.configService.get<string>('MAIL_FROM');
 
     if (!resendApiKey || !mailFrom) {
-      if (process.env.NODE_ENV === 'development') {
+      if (
+        this.configService.get<string>('NODE_ENV', 'development') ===
+        'development'
+      ) {
         this.logger.log(`Password reset link for ${to}: ${resetLink}`);
       } else {
         this.logger.warn(
@@ -293,20 +414,45 @@ export class AuthService {
     };
   }
 
+  // This method handles the refresh token flow, allowing users to obtain new access tokens using a valid refresh
+  // token. It includes comprehensive validation and security event logging to monitor refresh attempts.
+
   async refreshTokens(
     dto: RefreshTokenDto,
   ): Promise<{ message: string; access_token: string; refresh_token: string }> {
     const refreshSecret = this.getRefreshSecret();
-    if (!refreshSecret) {
-      throw new UNAE('Refresh token non configuré.');
-    }
-
     let payload: { sub: number; email: string; role?: string };
+    const refreshSecrets = [refreshSecret, ...this.getPreviousRefreshSecrets()];
+    let verifiedWithSecret: string | null = null;
+
     try {
-      payload = await this.jwtService.verifyAsync(dto.refreshToken, {
-        secret: refreshSecret,
-      });
+      let verifiedPayload:
+        | { sub: number; email: string; role?: string }
+        | undefined;
+
+      for (const secret of refreshSecrets) {
+        try {
+          verifiedPayload = await this.jwtService.verifyAsync<{
+            sub: number;
+            email: string;
+            role?: string;
+          }>(dto.refreshToken, {
+            secret,
+          });
+          verifiedWithSecret = secret;
+          break;
+        } catch {
+          // Try next rotation secret.
+        }
+      }
+
+      if (!verifiedPayload) {
+        throw new Error('Invalid refresh token for all configured secrets.');
+      }
+
+      payload = verifiedPayload;
     } catch {
+      await this.logSecurityEvent('REFRESH', null, 'FAILED_INVALID_TOKEN');
       throw new UNAE('Refresh token invalide ou expiré.');
     }
 
@@ -315,10 +461,12 @@ export class AuthService {
     });
 
     if (!user || !user.refreshTokenHash || !user.refreshTokenExpiresAt) {
+      await this.logSecurityEvent('REFRESH', payload.email, 'FAILED_NOT_FOUND');
       throw new UNAE('Refresh token invalide ou expiré.');
     }
 
     if (user.refreshTokenExpiresAt <= new Date()) {
+      await this.logSecurityEvent('REFRESH', user.email, 'FAILED_EXPIRED');
       throw new UNAE('Refresh token invalide ou expiré.');
     }
 
@@ -327,11 +475,24 @@ export class AuthService {
       dto.refreshToken,
     );
     if (!isRefreshValid) {
+      await this.logSecurityEvent(
+        'REFRESH',
+        user.email,
+        'FAILED_HASH_MISMATCH',
+      );
       throw new UNAE('Refresh token invalide ou expiré.');
     }
 
     const role = user.role ?? 'user';
     const tokens = await this.issueTokens(user, role);
+
+    await this.logSecurityEvent(
+      'REFRESH',
+      user.email,
+      verifiedWithSecret === refreshSecret
+        ? 'SUCCESS_CURRENT_SECRET'
+        : 'SUCCESS_ROTATED_SECRET',
+    );
 
     return {
       message: 'Session renouvelée.',
@@ -340,9 +501,14 @@ export class AuthService {
     };
   }
 
+  // This method handles user logout by invalidating the refresh token. It checks the provided refresh token,
+  // and if valid, it clears the stored refresh token hash and expiration for the user, effectively logging
+  // them out. It also logs the logout event for security monitoring.
+
   async logout(dto: RefreshTokenDto): Promise<{ message: string }> {
     const refreshSecret = this.getRefreshSecret();
     if (!refreshSecret) {
+      await this.logSecurityEvent('LOGOUT', null, 'SUCCESS_NOOP');
       return { message: 'Déconnexion réussie.' };
     }
 
@@ -361,9 +527,10 @@ export class AuthService {
         user.refreshTokenHash = null;
         user.refreshTokenExpiresAt = null;
         await this.usersRepository.save(user);
+        await this.logSecurityEvent('LOGOUT', user.email, 'SUCCESS');
       }
     } catch {
-      // Keep logout idempotent and avoid leaking token validity.
+      await this.logSecurityEvent('LOGOUT', null, 'SUCCESS_IDEMPOTENT');
     }
 
     return { message: 'Déconnexion réussie.' };

@@ -59,6 +59,36 @@ export class User {
   })
   refreshTokenExpiresAt: Date | null;
 
+  // New fields for account lockout management
+
+  // These fields are used to implement an account lockout mechanism after a certain
+  // number of failed login attempts.
+  // FailedLoginAttempts counts the number of consecutive failed login attempts, and
+  // loginLockedUntil stores the timestamp until which the account is locked.
+
+  @Column({
+    name: 'failedloginattempts',
+    type: 'int',
+    default: 0,
+  })
+  failedLoginAttempts: number;
+
+  @Column({
+    name: 'loginlockeduntil',
+    type: 'timestamp',
+    nullable: true,
+  })
+  loginLockedUntil: Date | null;
+
+  // This field tracks the timestamp of the last failed login attempt, which is used to determine
+  // when to reset the failed login attempts counter.
+  @Column({
+    name: 'lastfailedloginat',
+    type: 'timestamp',
+    nullable: true,
+  })
+  lastFailedLoginAt: Date | null;
+
   @CreateDateColumn()
   createdAt: Date;
 }

@@ -21,9 +21,9 @@ export class AuthController {
   }
 
   @Post('login')
-  // We limit the number of login attempts to 5 per minute to prevent brute-force attacks.
+  // Keep enough room for account-level lockout logic (starts at 10 fails), while still rate-limiting bots.
   // The Throttle decorator from @nestjs/throttler is used to enforce this rate limit on the login endpoint.
-  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Throttle({ default: { limit: 15, ttl: 60_000 } })
   login(@Body() dto: LoginDto) {
     return this.authService.login(dto);
   }
