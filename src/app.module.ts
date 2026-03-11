@@ -21,6 +21,8 @@ import { UsersModule } from './users/users.module';
 
 // Debug service to log loaded TypeORM entities on application startup
 import { TypeormDebugService } from './database/typeorm-debug.service';
+import { CategoriesModule } from './categories/categories.module';
+import { MenuItemsModule } from './menu-items/menu-items.module';
 
 @Module({
   imports: [
@@ -125,6 +127,8 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         },
       ],
     }),
+    CategoriesModule,
+    MenuItemsModule,
   ],
   controllers: [AppController],
   // Services available for dependency injection throughout application

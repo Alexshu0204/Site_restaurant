@@ -98,6 +98,8 @@ async function bootstrap() {
       .setVersion('1.0')
       .addTag('users')
       .addTag('auth')
+      .addTag('categories')
+      .addTag('menu-items')
       .addBearerAuth()
       .build();
 
