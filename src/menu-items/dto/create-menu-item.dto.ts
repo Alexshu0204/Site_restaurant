@@ -14,12 +14,12 @@ import {
 export class CreateMenuItemDto {
   @ApiProperty({
     example: 'Tiramisu maison',
-    maxLength: 100,
+    maxLength: 255,
     description: 'Nom commercial du plat.',
   })
   @IsString()
   @IsNotEmpty()
-  @MaxLength(100)
+  @MaxLength(255)
   name: string;
 
   @ApiPropertyOptional({
@@ -39,6 +39,17 @@ export class CreateMenuItemDto {
   @IsInt()
   @Min(0)
   price: number;
+
+  @ApiPropertyOptional({
+    example: 1450,
+    description: 'Prix format gourmand en centimes. Null si le plat n\'a pas de format gourmand.',
+    minimum: 0,
+    nullable: true,
+  })
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  priceGourmand?: number | null;
 
   @ApiPropertyOptional({
     example: 'https://cdn.example.com/images/tiramisu.jpg',

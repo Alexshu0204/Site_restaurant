@@ -1,5 +1,11 @@
-import { Entity, PrimaryGeneratedColumn as PGC, Column, OneToMany } from 'typeorm';
-import { MenuItem } from '../../menu-items/entities/menu-item.entity';
+import {
+  Entity,
+  PrimaryGeneratedColumn as PGC,
+  Column,
+  OneToMany,
+} from 'typeorm';
+import type { Relation } from 'typeorm';
+import type { MenuItem } from '../../menu-items/entities/menu-item.entity';
 
 @Entity('categories')
 export class Category {
@@ -11,6 +17,6 @@ export class Category {
 
   // Establish a one-to-many relationship with MenuItem. A category can have multiple menu
   // items, but each menu item belongs to one category.
-  @OneToMany(() => MenuItem, (item) => item.category)
-  menuItems: MenuItem[];
+  @OneToMany('MenuItem', 'category')
+  menuItems: Relation<MenuItem[]>;
 }

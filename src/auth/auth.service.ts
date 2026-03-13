@@ -175,7 +175,7 @@ export class AuthService {
     return (
       this.configService.get<string>('RESET_PASSWORD_URL') ??
       this.configService.get<string>('FRONTEND_URL') ??
-      'http://localhost:3003'
+      'http://localhost:3010'
     );
   }
 
