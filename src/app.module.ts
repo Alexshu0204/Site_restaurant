@@ -21,6 +21,13 @@ import { UsersModule } from './users/users.module';
 
 // Debug service to log loaded TypeORM entities on application startup
 import { TypeormDebugService } from './database/typeorm-debug.service';
+import { CategoriesModule } from './categories/categories.module';
+import { MenuItemsModule } from './menu-items/menu-items.module';
+import { SeedModule } from './seed/seed.module';
+
+// We conditionally include the SeedModule based on the SEED_ENABLED environment variable.
+const shouldEnableSeedModule =
+  process.env.NODE_ENV !== 'production' && process.env.SEED_ENABLED === 'true';
 
 @Module({
   imports: [
@@ -42,7 +49,7 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         NODE_ENV: Joi.string()
           .valid('development', 'production', 'test')
           .default('development'),
-        PORT: Joi.number().port().default(3003),
+        PORT: Joi.number().port().default(3010),
         DB_HOST: Joi.string().hostname().default('127.0.0.1'),
         DB_PORT: Joi.number().port().default(5432),
         DB_USER: Joi.string().required(),
@@ -87,6 +94,12 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         TYPEORM_DEBUG: Joi.string()
           .valid('true', 'false', '1', '0', 'on', 'off')
           .default('false'),
+
+        // This variable allows us to enable or disable the SeedModule, which is responsible for
+        // seeding the database with initial data.
+        SEED_ENABLED: Joi.string()
+          .valid('true', 'false', '1', '0', 'on', 'off')
+          .default('false'),
       }),
       validationOptions: {
         abortEarly: false,
@@ -125,6 +138,9 @@ import { TypeormDebugService } from './database/typeorm-debug.service';
         },
       ],
     }),
+    CategoriesModule,
+    MenuItemsModule,
+    ...(shouldEnableSeedModule ? [SeedModule] : []),
   ],
   controllers: [AppController],
   // Services available for dependency injection throughout application

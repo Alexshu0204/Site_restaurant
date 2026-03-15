@@ -1,3 +1,10 @@
+// This migration creates a new table called "users" with the following columns:
+// - id: A primary key that auto-increments for each new user.
+// - email: A unique string field that stores the user's email address.
+// - passwordHash: A string field that stores the hashed password of the user.
+// - createdAt: A timestamp that records when the user was created, with a default
+// value of the current time.
+
 import { MigrationInterface, QueryRunner } from "typeorm";
 
 export class AutoMigration1771863424419 implements MigrationInterface {
