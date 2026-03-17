@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { Booking } from '../../bookings/entities/booking.entity';
+import { EventRequest } from '../../event-requests/entities/event-request.entity';
 
 // The User entity represents the users of the application. It defines the structure of the users table in the database,
 // including fields for email, password hash, and password reset information. The entity also includes a createdAt
@@ -106,4 +107,7 @@ export class User {
   // Relation to Booking (One user can have many bookings)
   @OneToMany(() => Booking, (booking) => booking.user)
   bookings: Booking[];
+
+  @OneToMany(() => EventRequest, (eventRequest) => eventRequest.user)
+  eventRequests: EventRequest[];
 }

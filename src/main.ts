@@ -101,6 +101,7 @@ async function bootstrap() {
       .addTag('auth')
       .addTag('categories')
       .addTag('menu-items')
+      .addTag('event-requests')
       .addBearerAuth()
       .build();
 

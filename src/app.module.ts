@@ -25,6 +25,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { MenuItemsModule } from './menu-items/menu-items.module';
 import { SeedModule } from './seed/seed.module';
 import { BookingsModule } from './bookings/bookings.module';
+import { EventRequestsModule } from './event-requests/event-requests.module';
 
 // We conditionally include the SeedModule based on the SEED_ENABLED environment variable.
 const shouldEnableSeedModule =
@@ -143,6 +144,7 @@ const shouldEnableSeedModule =
     MenuItemsModule,
     ...(shouldEnableSeedModule ? [SeedModule] : []),
     BookingsModule,
+    EventRequestsModule,
   ],
   controllers: [AppController],
   // Services available for dependency injection throughout application
