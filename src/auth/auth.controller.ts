@@ -3,6 +3,7 @@
 // the actual authentication logic.
 
 import { Body, Controller, Post } from '@nestjs/common';
+import { ApiBody } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
@@ -47,6 +48,21 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Post('register')
+  @ApiBody({
+    type: RegisterDto,
+    examples: {
+      signupPayload: {
+        summary: 'Payload d inscription',
+        value: {
+          lastName: 'USER_LASTNAME',
+          firstName: 'USER_FIRSTNAME',
+          phone: '0000000000',
+          email: 'user@local.test',
+          password: 'pleaseeditpassword',
+        },
+      },
+    },
+  })
   register(@Body() dto: RegisterDto) {
     return this.authService.register(dto);
   }

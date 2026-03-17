@@ -8,7 +8,7 @@ Le README principal reste oriente produit/professionnel.
 Construire une API backend NestJS securisee pour un site vitrine de restaurant.
 
 ## Perimetre Fonctionnel
-- Inscription (`register`)
+- Inscription (`register`) avec `nom`, `prenom`, `telephone`, `email`, `password`
 - Connexion (`login`)
 - Renouvellement de session (`refresh`)
 - Deconnexion (`logout`)
@@ -25,6 +25,27 @@ Construire une API backend NestJS securisee pour un site vitrine de restaurant.
 - Configuration centralisee via variables d'environnement + validation Joi
 - Documentation API via Swagger (tags et schemas DTO)
 - Relations SQL: `menu_items.categoryId -> categories.id`
+- Extension du modele `users` avec `nom`, `prenom` et `telephone`
+- Seeder idempotent pour le peuplement initial de la carte
+
+## Seeder (Donnees de la Carte)
+
+Le projet integre un seeder lance via `npm run seed:run` independamment du demarrage de l'API.
+
+### Fonctionnement
+- Logique d'**upsert** par nom : chaque item est insere s'il est absent, ou mis a jour uniquement si un champ surveille a change.
+- Correspondance aux anciens noms pour gerer les renommages sans perte de donnees.
+- Ordre des categories preserve via `displayOrder`.
+- Trois niveaux de prix (`price`, `priceGourmand`, `priceTresGourmand`) pour les formules verre / demi-bouteille / bouteille.
+
+### Pourquoi les donnees de la carte sont-elles ecrites en dur dans le seed ?
+
+Ce projet est un site **vitrine** pour un restaurant reel. La carte est un contenu **metier stable et controle**, pas une donnee generee par les utilisateurs. L'ecrire directement dans le seed presente plusieurs avantages :
+
+- **Reproductibilite** : tout nouvel environnement (dev, staging, prod) obtient automatiquement la carte complete apres `migration:run` + `seed:run`, sans saisie manuelle.
+- **Tracabilite Git** : chaque modification de prix, de description ou de disponibilite est versionnee aux cotes du code et du schema, offrant un historique complet.
+- **Idempotence** : le seed peut etre rejoue autant de fois que necessaire sans creer de doublons ni ecraser des donnees utilement.
+- **Separation des responsabilites** : le schema evolue via les migrations, la carte via le seed, et les donnees dynamiques (reservations, comptes utilisateurs) via l'API — chaque couche a son outil.
 
 ## Securite Mise en Place
 - Hash des mots de passe avec Argon2

@@ -223,6 +223,9 @@ export class AuthService {
     const passwordHash = await argon2.hash(dto.password);
 
     const user = this.usersRepository.create({
+      lastName: dto.lastName ?? null,
+      firstName: dto.firstName ?? null,
+      phone: dto.phone ?? null,
       email: dto.email,
       passwordHash,
       role: 'user',
@@ -233,6 +236,9 @@ export class AuthService {
     return {
       message: 'Vous êtes inscrit.',
       id: savedUser.id,
+      lastName: savedUser.lastName,
+      firstName: savedUser.firstName,
+      phone: savedUser.phone,
       email: savedUser.email,
     };
   } // Close register method

@@ -1,14 +1,48 @@
-import { PartialType } from '@nestjs/mapped-types';
+import { Transform } from 'class-transformer';
+import { PartialType } from '@nestjs/swagger';
 import { CreateUserDto } from './create-user.dto';
 import {
   IsEmail,
+  IsNotEmpty,
   IsOptional,
   IsString,
   Matches,
+  MaxLength,
   MinLength,
 } from 'class-validator';
 
 export class UpdateUserDto extends PartialType(CreateUserDto) {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Matches(/^[^<>]*$/, {
+    message: 'Le nom ne doit pas contenir de balises HTML.',
+  })
+  lastName?: string | null;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Matches(/^[^<>]*$/, {
+    message: 'Le prenom ne doit pas contenir de balises HTML.',
+  })
+  firstName?: string | null;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsOptional()
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  @Matches(/^[0-9+().\s-]{6,30}$/, {
+    message: 'Le numero de telephone est invalide.',
+  })
+  phone?: string | null;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsOptional()
   @IsEmail()
   email?: string;

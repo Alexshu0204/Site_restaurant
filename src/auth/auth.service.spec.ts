@@ -37,11 +37,15 @@ describe('AuthService', () => {
   const argon2Verify = argon2.verify as jest.MockedFunction<
     typeof argon2.verify
   >;
+  const emailFor = (key: string): string => `${key}@local.test`;
 
   const makeUser = (overrides: Partial<User> = {}): User =>
     ({
       id: 1,
-      email: 'user@example.com',
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor('auth-user-1'),
       passwordHash: 'stored-password-hash',
       role: 'user',
       passwordResetTokenHash: null,
@@ -224,7 +228,7 @@ describe('AuthService', () => {
 
         return Promise.resolve({
           sub: 1,
-          email: 'user@example.com',
+          email: emailFor('auth-user-1'),
           role: 'user',
         });
       },
@@ -264,7 +268,7 @@ describe('AuthService', () => {
       .mockImplementation(() => Promise.resolve());
 
     const result = await service.forgotPassword({
-      email: 'missing@example.com',
+      email: emailFor('missing-user'),
     });
 
     expect(result.message).toContain('lien de réinitialisation');
@@ -272,7 +276,7 @@ describe('AuthService', () => {
     expect(securityEventRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'PASSWORD_RESET_REQUEST',
-        email: 'missing@example.com',
+        email: emailFor('missing-user'),
         outcome: 'NO_USER',
       }),
     );

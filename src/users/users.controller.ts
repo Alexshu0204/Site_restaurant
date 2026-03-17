@@ -8,7 +8,7 @@ import {
   Patch,
   UseGuards,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiTags } from '@nestjs/swagger';
 import { JwtAuthGuard as JwtAG } from 'src/auth/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/auth/guards/roles.guard';
 import { Roles } from 'src/auth/decorators/roles.decorator';
@@ -39,6 +39,41 @@ export class UsersController {
 
   @Patch(':id')
   @UseGuards(OwnerGuard)
+  @ApiBody({
+    type: UpdateUserDto,
+    examples: {
+      updateProfileOnly: {
+        summary: 'Mettre a jour le profil',
+        value: {
+          lastName: 'USER_LASTNAME',
+          firstName: 'USER_FIRSTNAME',
+          phone: '0000000000',
+        },
+      },
+      updateEmailOnly: {
+        summary: 'Mettre a jour l email',
+        value: {
+          email: 'user-update@local.test',
+        },
+      },
+      updatePasswordOnly: {
+        summary: 'Mettre a jour le mot de passe',
+        value: {
+          password: 'StrongPassword123!',
+        },
+      },
+      updateEverything: {
+        summary: 'Mettre a jour tous les champs',
+        value: {
+          lastName: 'USER_LASTNAME',
+          firstName: 'USER_FIRSTNAME',
+          phone: '0000000000',
+          email: 'user-update@local.test',
+          password: 'StrongPassword123!',
+        },
+      },
+    },
+  })
   update(@Param('id', ParseIntPipe) id: number, @Body() dto: UpdateUserDto) {
     return this.usersService.update(id, dto);
   }

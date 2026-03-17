@@ -22,11 +22,15 @@ describe('UsersService', () => {
   };
 
   const argon2Hash = argon2.hash as jest.MockedFunction<typeof argon2.hash>;
+  const emailFor = (id: number): string => `test-user-${id}@local.test`;
 
   const makeUser = (overrides: Partial<User> = {}): User =>
     ({
       id: 1,
-      email: 'user@example.com',
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor(1),
       passwordHash: 'password-hash',
       role: 'user',
       passwordResetTokenHash: null,
@@ -66,14 +70,28 @@ describe('UsersService', () => {
   it('findAll returns sanitized users without sensitive fields', async () => {
     usersRepository.find.mockResolvedValue([
       makeUser(),
-      makeUser({ id: 2, email: 'admin@example.com', role: 'admin' }),
+      makeUser({ id: 2, email: emailFor(2), role: 'admin' }),
     ]);
 
     const result = await service.findAll();
 
     expect(result).toEqual([
-      expect.objectContaining({ id: 1, email: 'user@example.com', role: 'user' }),
-      expect.objectContaining({ id: 2, email: 'admin@example.com', role: 'admin' }),
+      expect.objectContaining({
+        id: 1,
+        lastName: null,
+        firstName: null,
+        phone: null,
+        email: emailFor(1),
+        role: 'user',
+      }),
+      expect.objectContaining({
+        id: 2,
+        lastName: null,
+        firstName: null,
+        phone: null,
+        email: emailFor(2),
+        role: 'admin',
+      }),
     ]);
     expect(result[0]).not.toHaveProperty('passwordHash');
     expect(result[0]).not.toHaveProperty('refreshTokenHash');
@@ -87,16 +105,16 @@ describe('UsersService', () => {
 
   it('update throws ConflictException when email is already used by another user', async () => {
     usersRepository.findOne
-      .mockResolvedValueOnce(makeUser({ id: 1, email: 'a@example.com' }))
-      .mockResolvedValueOnce(makeUser({ id: 2, email: 'taken@example.com' }));
+      .mockResolvedValueOnce(makeUser({ id: 1, email: emailFor(10) }))
+      .mockResolvedValueOnce(makeUser({ id: 2, email: emailFor(20) }));
 
     await expect(
-      service.update(1, { email: 'taken@example.com' }),
+      service.update(1, { email: emailFor(20) }),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
   it('update hashes password and returns sanitized response', async () => {
-    const user = makeUser({ id: 3, email: 'edit@example.com' });
+    const user = makeUser({ id: 3, email: emailFor(3) });
     usersRepository.findOne.mockResolvedValue(user);
     argon2Hash.mockResolvedValue('new-password-hash');
 
@@ -110,11 +128,41 @@ describe('UsersService', () => {
     expect(result).toEqual(
       expect.objectContaining({
         id: 3,
-        email: 'edit@example.com',
+        lastName: null,
+        firstName: null,
+        phone: null,
+        email: emailFor(3),
         message: 'Mot de passe mis à jour avec succès.',
       }),
     );
     expect(result).not.toHaveProperty('passwordHash');
+  });
+
+  it('update persists profile fields and returns a profile message', async () => {
+    const user = makeUser({ id: 5, email: emailFor(5) });
+    usersRepository.findOne.mockResolvedValue(user);
+
+    const result = await service.update(5, {
+      lastName: null,
+      firstName: null,
+      phone: null,
+    });
+
+    const saveCalls = usersRepository.save.mock.calls as Array<[User]>;
+    const savedUser = saveCalls[0][0];
+    expect(savedUser.lastName).toBeNull();
+    expect(savedUser.firstName).toBeNull();
+    expect(savedUser.phone).toBeNull();
+    expect(result).toEqual(
+      expect.objectContaining({
+        id: 5,
+        lastName: null,
+        firstName: null,
+        phone: null,
+        email: emailFor(5),
+        message: 'Profil mis à jour avec succès.',
+      }),
+    );
   });
 
   it('remove returns success message when user exists', async () => {

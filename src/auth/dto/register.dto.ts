@@ -1,6 +1,42 @@
-import { IsEmail, IsString, Matches, MinLength } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class RegisterDto {
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Matches(/^[^<>]*$/, {
+    message: 'Le nom ne doit pas contenir de balises HTML.',
+  })
+  lastName: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(100)
+  @Matches(/^[^<>]*$/, {
+    message: 'Le prenom ne doit pas contenir de balises HTML.',
+  })
+  firstName: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(30)
+  @Matches(/^[0-9+().\s-]{6,30}$/, {
+    message: 'Le numero de telephone est invalide.',
+  })
+  phone: string;
+
+  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
   @IsEmail()
   email: string;
 

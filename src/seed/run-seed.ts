@@ -9,11 +9,11 @@ async function bootstrapSeed(): Promise<void> {
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (isProduction) {
-    throw new Error('Seed bloque: NODE_ENV=production.');
+    throw new Error('Seed blocked: NODE_ENV=production.');
   }
 
   if (process.env.SEED_ENABLED !== 'true') {
-    throw new Error('Seed bloque: SEED_ENABLED doit etre "true".');
+    throw new Error('Seed blocked: SEED_ENABLED must be "true".');
   }
 
   const app = await NestFactory.createApplicationContext(AppModule, {
@@ -24,7 +24,7 @@ async function bootstrapSeed(): Promise<void> {
     const seedService: SeedService = app.get(SeedService, { strict: false });
     // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     await seedService.seed();
-    logger.log('Seed execute avec succes.');
+    logger.log('Seed executed successfully.');
   } finally {
     await app.close();
   }

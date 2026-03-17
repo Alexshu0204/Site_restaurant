@@ -11,8 +11,9 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const isDevelopment = process.env.NODE_ENV === 'development';
-  const isProduction = process.env.NODE_ENV === 'production';
+  const nodeEnv = process.env.NODE_ENV ?? 'development';
+  const isProduction = nodeEnv === 'production';
+  const isSwaggerEnabled = process.env.SWAGGER_ENABLED !== 'false';
 
   const app = await NestFactory.create(AppModule, {
     logger: isProduction
@@ -61,7 +62,7 @@ async function bootstrap() {
     }),
   );
 
-  if (isDevelopment) {
+  if (isSwaggerEnabled) {
     // Apply a more relaxed Content Security Policy for the Swagger UI in development
     // to allow inline scripts and styles.
 
@@ -104,9 +105,19 @@ async function bootstrap() {
       .build();
 
     const document = SwaggerModule.createDocument(app, config);
-    SwaggerModule.setup('docs', app, document);
+    SwaggerModule.setup('docs', app, document, {
+      swaggerOptions: {
+        persistAuthorization: true,
+      },
+    });
   }
 
-  await app.listen(process.env.PORT ?? 3010);
+  const port = Number(process.env.PORT ?? 3010);
+  await app.listen(port);
+
+  console.log(`Server running on http://localhost:${port}`);
+  if (isSwaggerEnabled) {
+    console.log(`Swagger documentation available at http://localhost:${port}/docs`);
+  }
 }
 void bootstrap();

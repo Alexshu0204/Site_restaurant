@@ -2,8 +2,10 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+import { Booking } from '../../bookings/entities/booking.entity';
 
 // The User entity represents the users of the application. It defines the structure of the users table in the database,
 // including fields for email, password hash, and password reset information. The entity also includes a createdAt
@@ -13,6 +15,15 @@ import {
 export class User {
   @PrimaryGeneratedColumn()
   id: number;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  lastName: string | null;
+
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  firstName: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  phone: string | null;
 
   @Column({ type: 'varchar', length: 150, unique: true })
   email: string;
@@ -91,4 +102,8 @@ export class User {
 
   @CreateDateColumn()
   createdAt: Date;
+
+  // Relation to Booking (One user can have many bookings)
+  @OneToMany(() => Booking, (booking) => booking.user)
+  bookings: Booking[];
 }

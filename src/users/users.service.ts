@@ -22,6 +22,9 @@ export class UsersService {
   private sanitizeUser(user: User) {
     return {
       id: user.id,
+      lastName: user.lastName,
+      firstName: user.firstName,
+      phone: user.phone,
       email: user.email,
       role: user.role,
       createdAt: user.createdAt,
@@ -48,6 +51,12 @@ export class UsersService {
       throw new NFE('Utilisateur non trouvé.');
     }
 
+    const profileDto = dto as UpdateUserDto & {
+      lastName?: string | null;
+      firstName?: string | null;
+      phone?: string | null;
+    };
+
     // If the email is being updated, check if the new email is already in use by another user
     if (dto.email && dto.email !== user.email) {
       const existing = await this.usersRepository.findOne({
@@ -64,7 +73,19 @@ export class UsersService {
     if (dto.password) {
       user.passwordHash = await argon2.hash(dto.password);
     }
-    
+
+    if (profileDto.lastName !== undefined) {
+      user.lastName = profileDto.lastName;
+    }
+
+    if (profileDto.firstName !== undefined) {
+      user.firstName = profileDto.firstName;
+    }
+
+    if (profileDto.phone !== undefined) {
+      user.phone = profileDto.phone;
+    }
+
     // Save the updated user to the database
     const saved = await this.usersRepository.save(user);
     const safeUser = this.sanitizeUser(saved);
@@ -77,6 +98,12 @@ export class UsersService {
       message = 'Email mis à jour avec succès.';
     } else if (dto.password) {
       message = 'Mot de passe mis à jour avec succès.';
+    } else if (
+      dto.lastName !== undefined ||
+      dto.firstName !== undefined ||
+      dto.phone !== undefined
+    ) {
+      message = 'Profil mis à jour avec succès.';
     }
 
     return { ...safeUser, message };

@@ -26,6 +26,7 @@ describe('UsersController', () => {
     update: jest.Mock;
     remove: jest.Mock;
   };
+  const emailFor = (id: number): string => `test-user-${id}@local.test`;
 
   beforeEach(async () => {
     usersService = {
@@ -48,39 +49,53 @@ describe('UsersController', () => {
   });
 
   it('findAll delegates to UsersService.findAll', async () => {
-    usersService.findAll.mockResolvedValue([{ id: 1, email: 'a@example.com' }]);
+    usersService.findAll.mockResolvedValue([{ id: 1, email: emailFor(1) }]);
 
     const result = await controller.findAll();
 
     expect(usersService.findAll).toHaveBeenCalledTimes(1);
-    expect(result).toEqual([{ id: 1, email: 'a@example.com' }]);
+    expect(result).toEqual([{ id: 1, email: emailFor(1) }]);
   });
 
   it('findOne delegates to UsersService.findOne', async () => {
-    usersService.findOne.mockResolvedValue({ id: 2, email: 'b@example.com' });
+    usersService.findOne.mockResolvedValue({ id: 2, email: emailFor(2) });
 
     const result = await controller.findOne(2);
 
     expect(usersService.findOne).toHaveBeenCalledWith(2);
-    expect(result).toEqual({ id: 2, email: 'b@example.com' });
+    expect(result).toEqual({ id: 2, email: emailFor(2) });
   });
 
   it('update delegates to UsersService.update', async () => {
     usersService.update.mockResolvedValue({
       id: 3,
-      email: 'c@example.com',
-      message: 'Email mis à jour avec succès.',
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor(3),
+      message: 'Profil mis à jour avec succès.',
     });
 
-    const result = await controller.update(3, { email: 'c@example.com' });
+    const result = await controller.update(3, {
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor(3),
+    });
 
     expect(usersService.update).toHaveBeenCalledWith(3, {
-      email: 'c@example.com',
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor(3),
     });
     expect(result).toEqual({
       id: 3,
-      email: 'c@example.com',
-      message: 'Email mis à jour avec succès.',
+      lastName: null,
+      firstName: null,
+      phone: null,
+      email: emailFor(3),
+      message: 'Profil mis à jour avec succès.',
     });
   });
 
