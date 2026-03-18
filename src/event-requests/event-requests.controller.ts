@@ -16,6 +16,8 @@ import { EventRequestsService } from './event-requests.service';
 import { CreateEventRequestDto } from './dto/create-event-request.dto';
 import { UpdateEventRequestDto } from './dto/update-event-request.dto';
 import { EventRequestStatus } from './entities/event-request.entity';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 type AuthenticatedRequest = {
   user: {
@@ -79,6 +81,13 @@ export class EventRequestsController {
   @Get()
   findAll(@Req() req: AuthenticatedRequest) {
     return this.eventRequestsService.findAll(req.user);
+  }
+
+  @Get('admin/all')
+  @UseGuards(RolesGuard)
+  @Roles('admin', 'employee')
+  findAllAdmin() {
+    return this.eventRequestsService.findAllAdmin();
   }
 
   @Get(':id')

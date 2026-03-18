@@ -20,6 +20,8 @@ import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { JwtAuthGuard as JwtAG } from 'src/auth/guards/jwt-auth.guard';
 import { BookingStatus } from './entities/booking.entity';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 
 type AuthenticatedRequest = {
   user: {
@@ -73,9 +75,40 @@ export class BookingsController {
     return this.bookingsService.findAll(req.user);
   }
 
+  @Get('admin/all')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  findAllAdmin() {
+    return this.bookingsService.findAllAdmin();
+  }
+
+  @Get('stats')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  getStats() {
+    return this.bookingsService.getStats();
+  }
+
+  @Get('admin/stats')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  getAdminStats() {
+    return this.bookingsService.getAdminStats();
+  }
+
   @Get(':id')
   findOne(@Param('id', ParseIntPipe) id: number, @Req() req: AuthenticatedRequest) {
     return this.bookingsService.findOne(id, req.user);
+  }
+
+  @Patch(':id/status')
+  @UseGuards(RolesGuard)
+  @Roles('admin')
+  updateStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('status') status: 'confirmed' | 'cancelled',
+  ) {
+    return this.bookingsService.updateStatus(id, status);
   }
 
   @Patch(':id')

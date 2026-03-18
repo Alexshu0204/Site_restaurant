@@ -1,8 +1,10 @@
 /* eslint-disable prettier/prettier */
 import { Injectable, Logger } from '@nestjs/common';
+import * as argon2 from 'argon2';
 import { DataSource, Repository } from 'typeorm';
 import { Category } from '../categories/entities/category.entity';
 import { MenuItem } from '../menu-items/entities/menu-item.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class SeedService {
@@ -13,11 +15,52 @@ export class SeedService {
 	async seed(): Promise<void> {
 		const categoriesRepository = this.dataSource.getRepository(Category);
 		const menuItemsRepository = this.dataSource.getRepository(MenuItem);
+		const usersRepository = this.dataSource.getRepository(User);
 
 		const categoriesMap = await this.ensureCategories(categoriesRepository);
 		await this.ensureMenuItems(menuItemsRepository, categoriesMap);
+		await this.ensureAdminUser(usersRepository);
 
 		this.logger.log('Seed termine avec succes.');
+	}
+
+	private async ensureAdminUser(
+		usersRepository: Repository<User>,
+	): Promise<void> {
+		const adminEmail = (process.env.SEED_ADMIN_EMAIL ?? '').trim().toLowerCase();
+		const adminPassword = process.env.SEED_ADMIN_PASSWORD ?? '';
+
+		if (!adminEmail || !adminPassword) {
+			this.logger.warn(
+				'SEED_ADMIN_EMAIL/SEED_ADMIN_PASSWORD absents: creation admin ignoree.',
+			);
+			return;
+		}
+
+		let adminUser = await usersRepository.findOne({
+			where: { email: adminEmail },
+		});
+
+		const passwordHash = await argon2.hash(adminPassword);
+
+		if (!adminUser) {
+			adminUser = usersRepository.create({
+				lastName: null,
+				firstName: null,
+				phone: null,
+				email: adminEmail,
+				passwordHash,
+				role: 'admin',
+			});
+			await usersRepository.save(adminUser);
+			this.logger.log(`Admin seed cree: ${adminEmail}`);
+			return;
+		}
+
+		adminUser.role = 'admin';
+		adminUser.passwordHash = passwordHash;
+		await usersRepository.save(adminUser);
+		this.logger.log(`Admin seed mis a jour: ${adminEmail}`);
 	}
 
 	// This method ensures that the predefined categories exist in the database.

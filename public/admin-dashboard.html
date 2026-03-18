@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Admin Dashboard - Prototype</title>
+    <style>
+      :root {
+        --bg: #f3f2ee;
+        --surface: #ffffff;
+        --surface-soft: #f9f8f5;
+        --text: #1f2421;
+        --muted: #5c635e;
+        --brand: #b22222;
+        --brand-dark: #7a1717;
+        --ok: #136f3a;
+        --warn: #a65b00;
+        --line: #dfdcd2;
+        --shadow: 0 10px 24px rgba(24, 28, 25, 0.08);
+        --radius: 14px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Segoe UI", "Trebuchet MS", "Arial", sans-serif;
+        color: var(--text);
+        background:
+          radial-gradient(circle at 15% 10%, #fff9ef 0, transparent 40%),
+          radial-gradient(circle at 85% 0%, #fde7dd 0, transparent 35%),
+          var(--bg);
+        min-height: 100vh;
+      }
+
+      .layout {
+        max-width: 1180px;
+        margin: 24px auto;
+        padding: 0 16px 32px;
+      }
+
+      .hero {
+        background: linear-gradient(120deg, #1f2421, #2f3933 60%, #3f4f46);
+        color: #fff;
+        border-radius: var(--radius);
+        padding: 22px;
+        box-shadow: var(--shadow);
+        margin-bottom: 18px;
+      }
+
+      .hero h1 {
+        margin: 0;
+        font-size: clamp(1.2rem, 2vw, 1.8rem);
+      }
+
+      .hero p {
+        margin: 8px 0 0;
+        color: #e5e8e3;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: 1fr 220px auto;
+        gap: 10px;
+        margin-top: 14px;
+      }
+
+      .input,
+      .button {
+        border-radius: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        font-size: 0.95rem;
+      }
+
+      .input {
+        padding: 11px 12px;
+        color: #fff;
+        background: rgba(255, 255, 255, 0.08);
+      }
+
+      .input::placeholder {
+        color: #d6dcd6;
+      }
+
+      .button {
+        padding: 11px 14px;
+        cursor: pointer;
+        background: var(--brand);
+        color: #fff;
+        border-color: transparent;
+        font-weight: 600;
+        transition: transform 0.12s ease, background 0.12s ease;
+      }
+
+      .button:hover {
+        background: var(--brand-dark);
+        transform: translateY(-1px);
+      }
+
+      .status {
+        margin-top: 12px;
+        font-size: 0.9rem;
+        color: #f7f2d5;
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(130px, 1fr));
+        gap: 12px;
+      }
+
+      .card {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: var(--shadow);
+      }
+
+      .card .label {
+        color: var(--muted);
+        font-size: 0.85rem;
+      }
+
+      .card .value {
+        margin-top: 8px;
+        font-size: 1.45rem;
+        font-weight: 700;
+      }
+
+      .section {
+        margin-top: 16px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+
+      .panel {
+        background: var(--surface);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        box-shadow: var(--shadow);
+        overflow: hidden;
+      }
+
+      .panel h2 {
+        margin: 0;
+        padding: 12px 14px;
+        font-size: 1rem;
+        background: var(--surface-soft);
+        border-bottom: 1px solid var(--line);
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 9px 12px;
+        border-bottom: 1px solid var(--line);
+        font-size: 0.9rem;
+      }
+
+      th {
+        color: var(--muted);
+        font-weight: 600;
+      }
+
+      .pill {
+        display: inline-block;
+        border-radius: 999px;
+        padding: 3px 8px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        background: #eef0ea;
+      }
+
+      .pill.confirmed {
+        background: #e6f5ec;
+        color: var(--ok);
+      }
+
+      .pill.pending,
+      .pill.inquiry_received,
+      .pill.awaiting_client_confirmation {
+        background: #fff2df;
+        color: var(--warn);
+      }
+
+      .empty {
+        padding: 14px;
+        color: var(--muted);
+        font-size: 0.9rem;
+      }
+
+      @media (max-width: 980px) {
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .grid {
+          grid-template-columns: repeat(2, minmax(130px, 1fr));
+        }
+
+        .section {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="layout">
+      <section class="hero">
+        <h1>Dashboard admin prototype</h1>
+        <p>Version simple HTML/CSS en attendant React.</p>
+        <div class="toolbar">
+          <input id="token" class="input" placeholder="JWT admin (Bearer token)" />
+          <input id="baseUrl" class="input" placeholder="Base URL API" value="" />
+          <button id="load" class="button">Charger</button>
+        </div>
+        <div id="status" class="status">Prêt à charger les données.</div>
+      </section>
+
+      <section class="grid" id="kpis"></section>
+
+      <section class="section">
+        <article class="panel">
+          <h2>Statuts bookings</h2>
+          <div id="bookingsStatus"></div>
+        </article>
+        <article class="panel">
+          <h2>Statuts event requests</h2>
+          <div id="eventStatus"></div>
+        </article>
+      </section>
+
+      <section class="section">
+        <article class="panel">
+          <h2>Dernières bookings</h2>
+          <div id="recentBookings"></div>
+        </article>
+        <article class="panel">
+          <h2>Dernières event requests</h2>
+          <div id="recentEvents"></div>
+        </article>
+      </section>
+    </main>
+
+    <script>
+      const kpiOrder = [
+        ['usersTotal', 'Utilisateurs'],
+        ['bookingsTotal', 'Bookings'],
+        ['eventRequestsTotal', 'Event requests'],
+        ['bookingsToday', 'Bookings aujourd\'hui'],
+        ['bookingsUpcoming', 'Bookings à venir'],
+        ['eventRequestsToday', 'ER aujourd\'hui'],
+      ];
+
+      const statusEl = document.getElementById('status');
+      const tokenEl = document.getElementById('token');
+      const baseUrlEl = document.getElementById('baseUrl');
+      const loadBtn = document.getElementById('load');
+
+      function asHtmlTable(entries, keyLabel, valueLabel) {
+        if (!entries.length) return '<div class="empty">Aucune donnée.</div>';
+
+        const rows = entries
+          .map(([k, v]) => `<tr><td>${k}</td><td>${v}</td></tr>`)
+          .join('');
+
+        return `<table><thead><tr><th>${keyLabel}</th><th>${valueLabel}</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      function renderKpis(kpis) {
+        const root = document.getElementById('kpis');
+        root.innerHTML = kpiOrder
+          .map(([key, label]) => {
+            const value = kpis[key] ?? 0;
+            return `<article class="card"><div class="label">${label}</div><div class="value">${value}</div></article>`;
+          })
+          .join('');
+      }
+
+      function renderStatusBlocks(payload) {
+        document.getElementById('bookingsStatus').innerHTML = asHtmlTable(
+          Object.entries(payload.bookings.byStatus || {}),
+          'Statut',
+          'Total',
+        );
+
+        document.getElementById('eventStatus').innerHTML = asHtmlTable(
+          Object.entries(payload.eventRequests.byStatus || {}),
+          'Statut',
+          'Total',
+        );
+      }
+
+      function asList(items, kind) {
+        if (!items?.length) return '<div class="empty">Aucune donnée.</div>';
+
+        if (kind === 'bookings') {
+          const rows = items
+            .map(
+              (b) =>
+                `<tr>
+                  <td>#${b.id}</td>
+                  <td>${new Date(b.reservationDate).toLocaleString('fr-FR')}</td>
+                  <td>${b.guestsNumber}</td>
+                  <td><span class="pill ${b.status}">${b.status}</span></td>
+                </tr>`,
+            )
+            .join('');
+
+          return `<table><thead><tr><th>ID</th><th>Date</th><th>Convives</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>`;
+        }
+
+        const rows = items
+          .map(
+            (e) =>
+              `<tr>
+                <td>#${e.id}</td>
+                <td>${new Date(e.eventDate).toLocaleDateString('fr-FR')}</td>
+                <td>${e.participants}</td>
+                <td><span class="pill ${e.status}">${e.status}</span></td>
+              </tr>`,
+          )
+          .join('');
+
+        return `<table><thead><tr><th>ID</th><th>Date</th><th>Participants</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table>`;
+      }
+
+      function renderRecent(payload) {
+        document.getElementById('recentBookings').innerHTML = asList(payload.recent.bookings, 'bookings');
+        document.getElementById('recentEvents').innerHTML = asList(payload.recent.eventRequests, 'events');
+      }
+
+      async function loadOverview() {
+        const token = tokenEl.value.trim();
+        const baseUrl = baseUrlEl.value.trim() || window.location.origin;
+
+        if (!token) {
+          statusEl.textContent = 'Ajoute un token JWT admin pour charger le dashboard.';
+          return;
+        }
+
+        statusEl.textContent = 'Chargement...';
+
+        try {
+          const response = await fetch(`${baseUrl}/dashboard/overview`, {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          });
+
+          if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+          }
+
+          const payload = await response.json();
+          renderKpis(payload.kpis || {});
+          renderStatusBlocks(payload);
+          renderRecent(payload);
+          statusEl.textContent = 'Données chargées avec succès.';
+        } catch (error) {
+          statusEl.textContent = `Erreur de chargement: ${error.message}`;
+        }
+      }
+
+      baseUrlEl.value = window.location.origin;
+      loadBtn.addEventListener('click', loadOverview);
+    </script>
+  </body>
+</html>

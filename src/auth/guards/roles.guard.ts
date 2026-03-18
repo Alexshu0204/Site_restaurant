@@ -14,6 +14,8 @@ type RequestWithUserRole = {
 };
 
 @Injectable()
+// The RolesGuard is responsible for enforcing role-based access control on routes that require
+// specific roles.
 export class RolesGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 

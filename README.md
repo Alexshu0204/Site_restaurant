@@ -13,13 +13,111 @@ Backend API for a restaurant showcase website with authentication, users managem
 
 ## Features
 
-- Authentication: register, login, refresh, logout
-- Registration requires `nom`, `prenom`, `telephone`, `email`, and `password`
-- Password recovery: forgot-password and reset-password
-- Security events audit trail (`security_events`)
-- Users CRUD with role/owner protection
-- Categories CRUD
-- Menu items CRUD linked to categories
+- **Authentication**: register, login, refresh, logout
+- **Registration**: requires `nom`, `prenom`, `telephone`, `email`, and `password`
+- **Password recovery**: forgot-password and reset-password
+- **Security events**: audit trail (`security_events`)
+- **Users**: CRUD with role/owner protection and admin/employee roles
+- **Categories**: CRUD (admin/employee management)
+- **Menu items**: CRUD with category relations (admin/employee mutations, public read)
+- **Bookings**: create, list, update, delete with status management
+  - Admin routes: `GET /bookings/admin/all`, `GET /bookings/stats`, `GET /bookings/admin/stats`, `PATCH /bookings/:id/status`
+  - Status management for `pending`, `confirmed`, `cancelled` with state validation
+- **Event Requests**: full CRUD for large event planning
+  - Admin route: `GET /event-requests/admin/all` (admin & employee)
+  - Status workflow: `InquiryReceived` → `QuoteSent` → `AwaitingClientConfirmation` → `Confirmed`/`Declined`/`Cancelled`
+- **Dashboard**: admin overview with KPIs and recent records
+  - Endpoint: `GET /dashboard/overview` (admin only)
+  - HTML prototype: `/admin-dashboard.html`
+
+## Project Structure
+
+```text
+le-general-v2/
+|-- docker-compose.yml
+|-- eslint.config.mjs
+|-- nest-cli.json
+|-- package.json
+|-- README.md
+|-- README.STAGE.md
+|-- tsconfig.build.json
+|-- tsconfig.json
+|-- coverage/
+|   |-- lcov-report/
+|   `-- src/
+|-- scripts/
+|   `-- start-dev-clean.ps1
+|-- src/
+|   |-- app.controller.spec.ts
+|   |-- app.controller.ts
+|   |-- app.module.ts
+|   |-- app.service.ts
+|   |-- main.ts
+|   |-- auth/
+|   |   |-- decorators/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- guards/
+|   |   |-- strategies/
+|   |   |-- auth.controller.ts
+|   |   |-- auth.module.ts
+|   |   |-- auth.service.spec.ts
+|   |   `-- auth.service.ts
+|   |-- bookings/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- bookings.controller.spec.ts
+|   |   |-- bookings.controller.ts
+|   |   |-- bookings.module.ts
+|   |   |-- bookings.service.spec.ts
+|   |   `-- bookings.service.ts
+|   |-- categories/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- categories.controller.spec.ts
+|   |   |-- categories.controller.ts
+|   |   |-- categories.module.ts
+|   |   |-- categories.service.spec.ts
+|   |   `-- categories.service.ts
+|   |-- common/
+|   |   `-- filters/
+|   |-- database/
+|   |   |-- migrations/
+|   |   |-- data-source.ts
+|   |   `-- typeorm-debug.service.ts
+|   |-- event-requests/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- event-requests.controller.spec.ts
+|   |   |-- event-requests.controller.ts
+|   |   |-- event-requests.module.ts
+|   |   |-- event-requests.service.spec.ts
+|   |   `-- event-requests.service.ts
+|   |-- menu-items/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- menu-items.controller.spec.ts
+|   |   |-- menu-items.controller.ts
+|   |   |-- menu-items.module.ts
+|   |   |-- menu-items.service.spec.ts
+|   |   `-- menu-items.service.ts
+|   |-- seed/
+|   |   |-- run-seed.ts
+|   |   |-- seed.module.ts
+|   |   `-- seed.service.ts
+|   `-- users/
+|       |-- dto/
+|       |-- entities/
+|       |-- guards/
+|       |-- users.controller.spec.ts
+|       |-- users.controller.ts
+|       |-- users.module.ts
+|       |-- users.service.spec.ts
+|       `-- users.service.ts
+`-- test/
+	|-- app.e2e-spec.ts
+	`-- jest-e2e.json
+```
 
 ## Security
 
@@ -98,6 +196,33 @@ This is a showcase site for a real restaurant. The menu is curated, stable conte
 
 Data managed by the seed: **categories** (with `displayOrder`) and **menu items** (name, description, `price` / `priceGourmand` / `priceTresGourmand`, availability, image URL).
 
+## Admin & Employee Routes
+
+Routes marked `/admin/*` are protected with `JwtAuthGuard` + `RolesGuard` + `@Roles('admin', 'employee')`, except where noted:
+
+- `GET /bookings/admin/all` — all bookings (admin only)
+- `GET /bookings/stats` — KPI stats (admin only)
+- `GET /bookings/admin/stats` — enhanced stats: today's total, pending count, confirmed guests today (admin only)
+- `PATCH /bookings/:id/status` — update booking status (admin only)
+- `GET /event-requests/admin/all` — all event requests (admin & employee)
+- `GET /dashboard/overview` — aggregated KPIs and recent records (admin only)
+
+### Error Handling
+
+Administrative operations include explicit error messages for state transitions:
+
+- Booking: cannot confirm/cancel non-existent, already-set, or cancelled reservations
+- Event Request: cannot modify terminal states (`confirmed`, `declined`, `cancelled`); prevents duplicate status assignments
+
+## CORS Configuration
+
+CORS is configured to allow:
+
+- Origins: `http://localhost:3010` (development), `http://localhost:5173` (Vite), `null` (file:// protocol for local HTML files)
+- Methods: `GET`, `HEAD`, `PUT`, `PATCH`, `POST`, `DELETE`, `OPTIONS`
+- Headers: `Authorization` (Bearer tokens), `Content-Type`
+- Credentials: enabled
+
 ## Migrations
 
 ```bash
@@ -123,7 +248,7 @@ npm test -- users/users.service.spec.ts users/users.controller.spec.ts
 ## API Docs
 
 - Swagger URL (development): `/docs`
-- Current tags: `auth`, `users`, `categories`, `menu-items`
+- Current tags: `auth`, `users`, `categories`, `menu-items`, `bookings`, `event-requests`, `dashboard`
 
 ## Notes
 

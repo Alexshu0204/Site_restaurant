@@ -137,6 +137,14 @@ export class EventRequestsService {
     });
   }
 
+  async findAllAdmin() {
+    return this.eventRequestsRepository.find({
+      order: {
+        eventDate: 'ASC',
+      },
+    });
+  }
+
   async findOne(id: number, requester: RequestUser) {
     const eventRequest = await this.eventRequestsRepository.findOne({ where: { id } });
 
@@ -194,6 +202,24 @@ export class EventRequestsService {
 
     if (updateEventRequestDto.status !== undefined) {
       this.ensureCanSetStatus(updateEventRequestDto.status, requester);
+
+      if (updateEventRequestDto.status === eventRequest.status) {
+        throw new BadRequestException(
+          `Cette demande evenementielle a deja le statut "${eventRequest.status}".`,
+        );
+      }
+
+      const terminalStatuses: EventRequestStatus[] = [
+        EventRequestStatus.Confirmed,
+        EventRequestStatus.Declined,
+        EventRequestStatus.Cancelled,
+      ];
+      if (terminalStatuses.includes(eventRequest.status)) {
+        throw new BadRequestException(
+          `Impossible de modifier le statut d'une demande evenementielle au statut "${eventRequest.status}".`,
+        );
+      }
+
       eventRequest.status = updateEventRequestDto.status;
     }
 

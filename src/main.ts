@@ -6,7 +6,12 @@
 
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
+// The NestExpressApplication type is used to create an application that can serve static assets
+// and use Express-specific features.
+import { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
+// Importing the AppModule, which is the root module of the application that imports all other modules.
+import { join } from 'path';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -15,7 +20,7 @@ async function bootstrap() {
   const isProduction = nodeEnv === 'production';
   const isSwaggerEnabled = process.env.SWAGGER_ENABLED !== 'false';
 
-  const app = await NestFactory.create(AppModule, {
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: isProduction
       ? ['error', 'warn']
       : ['log', 'error', 'warn', 'debug', 'verbose'],
@@ -45,11 +50,16 @@ async function bootstrap() {
     }),
   );
 
+  // Serve simple static pages (ex: temporary admin dashboard prototype)
+  app.useStaticAssets(join(__dirname, '..', 'public'));
+
   // Enable CORS for specific origins and allow credentials
+  // 'null' is required for file:// origins (admin-dashboard.html opened locally)
   app.enableCors({
-    origin: ['http://localhost:3010', 'http://localhost:5173'],
+    origin: ['http://localhost:3010', 'http://localhost:5173', 'null'],
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Authorization', 'Content-Type'],
   });
 
   // Reject requests with non-whitelisted properties
@@ -102,6 +112,7 @@ async function bootstrap() {
       .addTag('categories')
       .addTag('menu-items')
       .addTag('event-requests')
+      .addTag('dashboard')
       .addBearerAuth()
       .build();
 

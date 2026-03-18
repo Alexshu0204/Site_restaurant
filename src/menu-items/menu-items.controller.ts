@@ -7,23 +7,31 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import {
+  ApiBearerAuth,
   ApiOperation,
   ApiParam,
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
+import { JwtAuthGuard as JwtAG } from '../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../auth/guards/roles.guard';
+import { Roles } from '../auth/decorators/roles.decorator';
 import { MenuItemsService } from './menu-items.service';
 import { CreateMenuItemDto } from './dto/create-menu-item.dto';
 import { UpdateMenuItemDto } from './dto/update-menu-item.dto';
 
 @ApiTags('menu-items')
+@ApiBearerAuth()
 @Controller('menu-items')
 export class MenuItemsController {
   constructor(private readonly menuItemsService: MenuItemsService) {}
 
   @Post()
+  @UseGuards(JwtAG, RolesGuard)
+  @Roles('admin')
   @ApiOperation({ summary: 'Creer un plat de la carte' })
   @ApiResponse({ status: 201, description: 'Plat cree avec succes.' })
   create(@Body() createMenuItemDto: CreateMenuItemDto) {
@@ -47,6 +55,8 @@ export class MenuItemsController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAG, RolesGuard)
+  @Roles('admin')
   @ApiOperation({ summary: 'Mettre a jour un plat' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiResponse({ status: 200, description: 'Plat mis a jour.' })
@@ -59,6 +69,8 @@ export class MenuItemsController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAG, RolesGuard)
+  @Roles('admin')
   @ApiOperation({ summary: 'Supprimer un plat' })
   @ApiParam({ name: 'id', type: Number, example: 1 })
   @ApiResponse({ status: 200, description: 'Plat supprime.' })

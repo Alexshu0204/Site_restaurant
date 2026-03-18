@@ -3,14 +3,13 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
-  UnauthorizedException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BOOKING_MAX_GUESTS, CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import { User } from '../users/entities/user.entity';
-import { Repository } from 'typeorm';
+import { MoreThan, Raw, Repository } from 'typeorm';
 
 type RequestUser = {
   sub: number;
@@ -122,6 +121,84 @@ export class BookingsService {
     });
   }
 
+  async findAllAdmin() {
+    return this.bookingsRepository.find({
+      order: {
+        reservationDate: 'ASC',
+      },
+    });
+  }
+
+  // The getStats method provides aggregated statistics about bookings, such as total count,
+  // upcoming bookings, today's bookings, and counts by status. This method is only accessible
+  // to admins.
+  async getStats() {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    // The startOfTomorrow variable is calculated by creating a new Date object for the next day
+    // at midnight.
+    const startOfTomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0,
+      0,
+      0,
+      0,
+    );
+
+    // The method uses Promise.all to execute multiple database queries in parallel, improving
+    // performance.
+    const [
+      total,
+      upcoming,
+      today,
+      pending,
+      confirmed,
+      cancelled,
+    ] = await Promise.all([
+      this.bookingsRepository.count(),
+      this.bookingsRepository.count({
+        where: {
+          reservationDate: MoreThan(now),
+        },
+      }),
+      this.bookingsRepository.count({
+        where: {
+          reservationDate: Raw(
+            (alias) => `${alias} >= :startOfToday AND ${alias} < :startOfTomorrow`,
+            {
+              startOfToday,
+              startOfTomorrow,
+            },
+          ),
+        },
+      }),
+      this.bookingsRepository.count({ where: { status: BookingStatus.Pending } }),
+      this.bookingsRepository.count({ where: { status: BookingStatus.Confirmed } }),
+      this.bookingsRepository.count({ where: { status: BookingStatus.Cancelled } }),
+    ]);
+
+    return {
+      total,
+      upcoming,
+      today,
+      byStatus: {
+        pending,
+        confirmed,
+        cancelled,
+      },
+    };
+  }
+
   // The findOne method retrieves a single booking by its ID. It checks if the booking exists and
   // if the requester has permission to access it (either they are the owner or an admin).
   async findOne(id: number, requester: RequestUser) {
@@ -167,6 +244,94 @@ export class BookingsService {
     }
 
     return this.bookingsRepository.save(booking);
+  }
+
+  async updateStatus(id: number, status: 'confirmed' | 'cancelled') {
+    if (status !== 'confirmed' && status !== 'cancelled') {
+      throw new BadRequestException(
+        'Statut invalide. Valeurs acceptees: confirmed, cancelled.',
+      );
+    }
+
+    const booking = await this.bookingsRepository.findOne({ where: { id } });
+    if (!booking) {
+      throw new NotFoundException(
+        `Reservation introuvable (id: ${id}).`,
+      );
+    }
+
+    const targetStatus =
+      status === 'confirmed' ? BookingStatus.Confirmed : BookingStatus.Cancelled;
+
+    if (booking.status === targetStatus) {
+      throw new BadRequestException(
+        `Cette reservation est deja au statut "${status}".`,
+      );
+    }
+
+    if (booking.status === BookingStatus.Cancelled) {
+      throw new BadRequestException(
+        'Impossible de modifier une reservation annulee. Veuillez creer une nouvelle reservation.',
+      );
+    }
+
+    booking.status = targetStatus;
+    return this.bookingsRepository.save(booking);
+  }
+
+  async getAdminStats() {
+    const now = new Date();
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+      0,
+      0,
+      0,
+      0,
+    );
+    const startOfTomorrow = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0,
+      0,
+      0,
+      0,
+    );
+
+    const todayRange = Raw(
+      (alias) => `${alias} >= :startOfToday AND ${alias} < :startOfTomorrow`,
+      { startOfToday, startOfTomorrow },
+    );
+
+    const [todayTotal, pendingCount, confirmedGuestsResult] = await Promise.all(
+      [
+        this.bookingsRepository.count({
+          where: { reservationDate: todayRange },
+        }),
+        this.bookingsRepository.count({
+          where: { status: BookingStatus.Pending },
+        }),
+        this.bookingsRepository
+          .createQueryBuilder('booking')
+          .select('SUM(booking.guestsNumber)', 'total')
+          .where(
+            'booking.reservationDate >= :startOfToday AND booking.reservationDate < :startOfTomorrow',
+            { startOfToday, startOfTomorrow },
+          )
+          .andWhere('booking.status = :status', {
+            status: BookingStatus.Confirmed,
+          })
+          .getRawOne<{ total: string }>(),
+      ],
+    );
+
+    return {
+      todayTotal,
+      pendingCount,
+      confirmedGuestsTodayTotal: Number(confirmedGuestsResult?.total ?? 0),
+    };
   }
 
   async remove(id: number, requester: RequestUser) {
