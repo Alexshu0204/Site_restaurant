@@ -198,6 +198,57 @@
         font-size: 0.9rem;
       }
 
+      .pill.new {
+        background: #e8f0fe;
+        color: #1a56db;
+      }
+
+      .pill.in_progress {
+        background: #fff2df;
+        color: var(--warn);
+      }
+
+      .pill.closed {
+        background: #e6f5ec;
+        color: var(--ok);
+      }
+
+      .pill.spam {
+        background: #fde8e8;
+        color: var(--brand);
+      }
+
+      .section-full {
+        margin-top: 16px;
+      }
+
+      .pill-count {
+        font-size: 0.78rem;
+        font-weight: 700;
+        background: var(--brand);
+        color: #fff;
+        border-radius: 999px;
+        padding: 2px 8px;
+      }
+
+      .contact-msg-row td {
+        background: var(--surface-soft);
+        padding: 10px 14px 14px 36px;
+        font-size: 0.88rem;
+        color: var(--text);
+        border-bottom: 1px solid var(--line);
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      tr.contact-row {
+        cursor: pointer;
+      }
+
+      tr.contact-row:hover td {
+        background: #f5f4f0;
+      }
+
       @media (max-width: 980px) {
         .toolbar {
           grid-template-columns: 1fr;
@@ -230,23 +281,30 @@
 
       <section class="section">
         <article class="panel">
-          <h2>Statuts bookings</h2>
+          <h2>Statuts réservations</h2>
           <div id="bookingsStatus"></div>
         </article>
         <article class="panel">
-          <h2>Statuts event requests</h2>
+          <h2>Statuts demandes événements</h2>
           <div id="eventStatus"></div>
         </article>
       </section>
 
       <section class="section">
         <article class="panel">
-          <h2>Dernières bookings</h2>
+          <h2>Dernières réservations</h2>
           <div id="recentBookings"></div>
         </article>
         <article class="panel">
-          <h2>Dernières event requests</h2>
+          <h2>Dernières demandes événements</h2>
           <div id="recentEvents"></div>
+        </article>
+      </section>
+
+      <section class="section-full">
+        <article class="panel">
+          <h2>Messages de contact <span id="contactsCount" class="pill-count" style="display:none"></span></h2>
+          <div id="contactsList"></div>
         </article>
       </section>
     </main>
@@ -254,12 +312,30 @@
     <script>
       const kpiOrder = [
         ['usersTotal', 'Utilisateurs'],
-        ['bookingsTotal', 'Bookings'],
-        ['eventRequestsTotal', 'Event requests'],
-        ['bookingsToday', 'Bookings aujourd\'hui'],
-        ['bookingsUpcoming', 'Bookings à venir'],
-        ['eventRequestsToday', 'ER aujourd\'hui'],
+        ['bookingsTotal', 'Réservations'],
+        ['eventRequestsTotal', 'Dem. événements'],
+        ['bookingsToday', "Réservations aujourd'hui"],
+        ['bookingsUpcoming', 'Réservations à venir'],
+        ['eventRequestsToday', 'Dem. événements auj.'],
       ];
+
+      const statusLabels = {
+        pending: 'En attente',
+        confirmed: 'Confirmé',
+        cancelled: 'Annulé',
+        inquiry_received: 'Demande reçue',
+        quote_sent: 'Devis envoyé',
+        awaiting_client_confirmation: 'Attente client',
+        declined: 'Refusé',
+        new: 'Nouveau',
+        in_progress: 'En cours',
+        closed: 'Traité',
+        spam: 'Spam',
+      };
+
+      function translateStatus(s) {
+        return statusLabels[s] ?? s;
+      }
 
       const statusEl = document.getElementById('status');
       const tokenEl = document.getElementById('token');
@@ -288,13 +364,13 @@
 
       function renderStatusBlocks(payload) {
         document.getElementById('bookingsStatus').innerHTML = asHtmlTable(
-          Object.entries(payload.bookings.byStatus || {}),
+          Object.entries(payload.bookings.byStatus || {}).map(([k, v]) => [translateStatus(k), v]),
           'Statut',
           'Total',
         );
 
         document.getElementById('eventStatus').innerHTML = asHtmlTable(
-          Object.entries(payload.eventRequests.byStatus || {}),
+          Object.entries(payload.eventRequests.byStatus || {}).map(([k, v]) => [translateStatus(k), v]),
           'Statut',
           'Total',
         );
@@ -311,7 +387,7 @@
                   <td>#${b.id}</td>
                   <td>${new Date(b.reservationDate).toLocaleString('fr-FR')}</td>
                   <td>${b.guestsNumber}</td>
-                  <td><span class="pill ${b.status}">${b.status}</span></td>
+                  <td><span class="pill ${b.status}">${translateStatus(b.status)}</span></td>
                 </tr>`,
             )
             .join('');
@@ -326,7 +402,7 @@
                 <td>#${e.id}</td>
                 <td>${new Date(e.eventDate).toLocaleDateString('fr-FR')}</td>
                 <td>${e.participants}</td>
-                <td><span class="pill ${e.status}">${e.status}</span></td>
+                <td><span class="pill ${e.status}">${translateStatus(e.status)}</span></td>
               </tr>`,
           )
           .join('');
@@ -337,6 +413,71 @@
       function renderRecent(payload) {
         document.getElementById('recentBookings').innerHTML = asList(payload.recent.bookings, 'bookings');
         document.getElementById('recentEvents').innerHTML = asList(payload.recent.eventRequests, 'events');
+      }
+
+      function renderContacts(contacts) {
+        const countEl = document.getElementById('contactsCount');
+        const listEl = document.getElementById('contactsList');
+
+        const newCount = contacts.filter((c) => c.status === 'new').length;
+        if (newCount > 0) {
+          countEl.textContent = `${newCount} nouveau${newCount > 1 ? 'x' : ''}`;
+          countEl.style.display = 'inline-block';
+        } else {
+          countEl.style.display = 'none';
+        }
+
+        if (!contacts.length) {
+          listEl.innerHTML = '<div class="empty">Aucun message reçu.</div>';
+          return;
+        }
+
+        const rows = contacts
+          .map(
+            (c) => `<tr>
+              <td>#${c.id}</td>
+              <td>${c.fullName}</td>
+              <td>${c.email}</td>
+              <td>${c.subject}</td>
+              <td>${new Date(c.createdAt).toLocaleDateString('fr-FR')}</td>
+              <td><span class="pill ${c.status}">${translateStatus(c.status)}</span></td>
+            </tr>`,
+          )
+          .join('');
+
+        const rows2 = contacts
+          .map(
+            (c) => `<tr class="contact-row" data-msg="${c.message.replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}" data-id="${c.id}">
+              <td>▶ #${c.id}</td>
+              <td>${c.fullName}</td>
+              <td>${c.email}</td>
+              <td>${c.subject}</td>
+              <td>${new Date(c.createdAt).toLocaleDateString('fr-FR')}</td>
+              <td><span class="pill ${c.status}">${translateStatus(c.status)}</span></td>
+            </tr>`,
+          )
+          .join('');
+
+        listEl.innerHTML = `<table><thead><tr><th></th><th>Nom</th><th>Email</th><th>Sujet</th><th>Reçu le</th><th>Statut</th></tr></thead><tbody>${rows2}</tbody></table>`;
+
+        listEl.querySelectorAll('tr.contact-row').forEach((row) => {
+          row.addEventListener('click', () => {
+            const id = row.dataset.id;
+            const existing = listEl.querySelector(`.contact-msg-row[data-for="${id}"]`);
+            if (existing) {
+              existing.remove();
+              row.querySelector('td:first-child').textContent = `▶ #${id}`;
+            } else {
+              const msg = row.dataset.msg;
+              const tr = document.createElement('tr');
+              tr.className = 'contact-msg-row';
+              tr.dataset.for = id;
+              tr.innerHTML = `<td colspan="6">${msg}</td>`;
+              row.insertAdjacentElement('afterend', tr);
+              row.querySelector('td:first-child').textContent = `▼ #${id}`;
+            }
+          });
+        });
       }
 
       async function loadOverview() {
@@ -351,20 +492,23 @@
         statusEl.textContent = 'Chargement...';
 
         try {
-          const response = await fetch(`${baseUrl}/dashboard/overview`, {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          });
+          const headers = { Authorization: `Bearer ${token}` };
 
-          if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-          }
+          const [overviewRes, contactsRes] = await Promise.all([
+            fetch(`${baseUrl}/dashboard/overview`, { headers }),
+            fetch(`${baseUrl}/contacts/admin/all`, { headers }),
+          ]);
 
-          const payload = await response.json();
+          if (!overviewRes.ok) throw new Error(`Dashboard HTTP ${overviewRes.status}`);
+          if (!contactsRes.ok) throw new Error(`Contacts HTTP ${contactsRes.status}`);
+
+          const payload = await overviewRes.json();
+          const contacts = await contactsRes.json();
+
           renderKpis(payload.kpis || {});
           renderStatusBlocks(payload);
           renderRecent(payload);
+          renderContacts(contacts);
           statusEl.textContent = 'Données chargées avec succès.';
         } catch (error) {
           statusEl.textContent = `Erreur de chargement: ${error.message}`;

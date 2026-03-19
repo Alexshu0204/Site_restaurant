@@ -1,6 +1,6 @@
 # Le General API
 
-Backend API for a restaurant showcase website with authentication, users management, categories, and menu items.
+Backend API for the showcase website redesign of Brasserie Le General (Paris), focused on secure customer acquisition funnels (contact, bookings, event requests), menu content, and admin operations.
 
 ## Tech Stack
 
@@ -26,6 +26,10 @@ Backend API for a restaurant showcase website with authentication, users managem
 - **Event Requests**: full CRUD for large event planning
   - Admin route: `GET /event-requests/admin/all` (admin & employee)
   - Status workflow: `InquiryReceived` → `QuoteSent` → `AwaitingClientConfirmation` → `Confirmed`/`Declined`/`Cancelled`
+- **Contacts**: acquisition-oriented free-form contact channel
+  - Public route: `POST /contacts`
+  - Admin routes: `GET /contacts/admin/all`, `GET /contacts/admin/:id`, `PATCH /contacts/admin/:id`, `DELETE /contacts/admin/:id`
+  - Status workflow: `new` → `in_progress` → `closed` (or `spam`)
 - **Dashboard**: admin overview with KPIs and recent records
   - Endpoint: `GET /dashboard/overview` (admin only)
   - HTML prototype: `/admin-dashboard.html`
@@ -81,6 +85,14 @@ le-general-v2/
 |   |   `-- categories.service.ts
 |   |-- common/
 |   |   `-- filters/
+|   |-- contacts/
+|   |   |-- dto/
+|   |   |-- entities/
+|   |   |-- contacts.controller.spec.ts
+|   |   |-- contacts.controller.ts
+|   |   |-- contacts.module.ts
+|   |   |-- contacts.service.spec.ts
+|   |   `-- contacts.service.ts
 |   |-- database/
 |   |   |-- migrations/
 |   |   |-- data-source.ts
@@ -205,6 +217,10 @@ Routes marked `/admin/*` are protected with `JwtAuthGuard` + `RolesGuard` + `@Ro
 - `GET /bookings/admin/stats` — enhanced stats: today's total, pending count, confirmed guests today (admin only)
 - `PATCH /bookings/:id/status` — update booking status (admin only)
 - `GET /event-requests/admin/all` — all event requests (admin & employee)
+- `GET /contacts/admin/all` — all contact messages (admin & employee)
+- `GET /contacts/admin/:id` — single contact message (admin & employee)
+- `PATCH /contacts/admin/:id` — process contact status/notes (admin & employee)
+- `DELETE /contacts/admin/:id` — delete contact message (admin only)
 - `GET /dashboard/overview` — aggregated KPIs and recent records (admin only)
 
 ### Error Handling
@@ -213,6 +229,7 @@ Administrative operations include explicit error messages for state transitions:
 
 - Booking: cannot confirm/cancel non-existent, already-set, or cancelled reservations
 - Event Request: cannot modify terminal states (`confirmed`, `declined`, `cancelled`); prevents duplicate status assignments
+- Contact: explicit not-found and invalid-update messages for admin processing actions
 
 ## CORS Configuration
 
@@ -248,11 +265,12 @@ npm test -- users/users.service.spec.ts users/users.controller.spec.ts
 ## API Docs
 
 - Swagger URL (development): `/docs`
-- Current tags: `auth`, `users`, `categories`, `menu-items`, `bookings`, `event-requests`, `dashboard`
+- Current tags: `auth`, `users`, `categories`, `menu-items`, `bookings`, `event-requests`, `contacts`, `dashboard`
 
 ## Notes
 
 - `menu_items.imageUrl` and `menu_items.description` are nullable.
 - Price is stored in centimes (`int`).
 - User profile fields `nom`, `prenom`, and `telephone` are stored in `users` and required during registration.
+- Contact messages are intentionally standalone (no relation to `users`) to keep submission public and frictionless.
 - `README.STAGE.md` contains the academic presentation version.

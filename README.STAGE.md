@@ -3,9 +3,10 @@
 ## Contexte
 Ce document est dedie a la presentation academique du projet.
 Le README principal reste oriente produit/professionnel.
+Le perimetre metier est la refonte du site vitrine de la Brasserie Le General a Paris.
 
 ## Objectif du Projet
-Construire une API backend NestJS securisee pour un site vitrine de restaurant.
+Construire une API backend NestJS securisee pour la refonte du site vitrine de la Brasserie Le General (Paris), avec un parcours d'acquisition complet: contact libre, reservations et demandes d'evenements.
 
 ## Perimetre Fonctionnel
 - Inscription (`register`) avec `nom`, `prenom`, `telephone`, `email`, `password`
@@ -18,6 +19,7 @@ Construire une API backend NestJS securisee pour un site vitrine de restaurant.
 - Gestion des plats (`menu-items`) relies aux categories
 - **Reservations client** (bookings): creation, suivi, modification statut (confirmer/annuler)
 - **Demandes d'evenements** (event-requests): formulaire complet pour les evenements prives
+- **Contact libre** (`contacts`): canal d'acquisition sans compte pour toute question client
 - **Dashboard admin**: vue d'ensemble avec KPIs et listes recentes
 
 ## Realisations Techniques
@@ -30,6 +32,7 @@ Construire une API backend NestJS securisee pour un site vitrine de restaurant.
 - Extension du modele `users` avec `nom`, `prenom`, `telephone` et `role` (enum: admin, employee, customer)
 - Seeder idempotent pour le peuplement initial de la carte + seeding optional d'admin via `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD`
 - Deux nouveaux modules complets: `bookings` et `event-requests` avec validations specifiques
+- Module `contacts` (entite, DTOs, routes publiques + admin, statuts de traitement)
 - Module `dashboard` pour agreger KPIs et metriques d'administration
 - Routes admin protegees par `JwtAuthGuard` + `RolesGuard` + `@Roles()`
 
@@ -70,7 +73,7 @@ Ce projet est un site **vitrine** pour un restaurant reel. La carte est un conte
 - **CORS securise**: `allowedHeaders: ['Authorization', 'Content-Type']` pour les tokens Bearer
 
 ## Resultats de Tests
-- Tests unitaires passes: 14 suites, 33 tests
+- Tests unitaires passes: 16 suites, 35 tests
 - Fichiers critiques testes:
   - `src/auth/auth.service.spec.ts`
   - `src/users/users.service.spec.ts`
@@ -79,6 +82,8 @@ Ce projet est un site **vitrine** pour un restaurant reel. La carte est un conte
   - `src/bookings/bookings.controller.spec.ts`
   - `src/event-requests/event-requests.service.spec.ts`
   - `src/event-requests/event-requests.controller.spec.ts`
+  - `src/contacts/contacts.service.spec.ts`
+  - `src/contacts/contacts.controller.spec.ts`
   - `src/dashboard/dashboard.service.spec.ts`
   - `src/dashboard/dashboard.controller.spec.ts`
 - Build valide et typecheck clean
@@ -89,6 +94,7 @@ Ce projet est un site **vitrine** pour un restaurant reel. La carte est un conte
 - `users.controller.ts`: 100%
 - `bookings`: modules/specs generes par NestJS, logique metier complete (CRUD, status updates, stats)
 - `event-requests`: modules/specs generes par NestJS, logique metier complete (CRUD, validation participants, transitions d'etat)
+- `contacts`: module complet (soumission publique + traitement admin/employee)
 - `dashboard`: agrege donnees de bookings et event-requests
 - Couverture globale plus basse car modules/bootstrap/migrations sont inclus dans le calcul
 - Tests unitaires valent les logiques critiques (access control, validations); E2E tests possibles pour les workflows admin
@@ -121,6 +127,13 @@ Ce projet est un site **vitrine** pour un restaurant reel. La carte est un conte
 - `PATCH /event-requests/:id` — modifier une demande avec validation de transitions d'etat
 - `DELETE /event-requests/:id` — supprimer une demande
 
+### Contacts (`/contacts`)
+- `POST /contacts` — route publique pour envoyer un message de contact
+- `GET /contacts/admin/all` — admin & employee: liste complete des messages
+- `GET /contacts/admin/:id` — admin & employee: detail d'un message
+- `PATCH /contacts/admin/:id` — admin & employee: mise a jour statut (`new`, `in_progress`, `closed`, `spam`) et notes admin
+- `DELETE /contacts/admin/:id` — admin: suppression d'un message
+
 ### Dashboard (`/dashboard`)
 - `GET /dashboard/overview` — admin: vue d'ensemble avec KPIs, statuts, dernieres operations
 
@@ -133,6 +146,7 @@ Prototype HTML/CSS/vanilla JavaScript servant de dashboard administrateur tempor
 - Section KPIs: total users, bookings, event requests, metriques journalieres
 - Section statuts: count by status pour bookings et event requests
 - Section listes: 10 dernieres reservations et demandes d'evenements
+- Section contacts: messages recus, statut traduit, badge des nouveaux messages, affichage du contenu message au clic
 - Accessible via `http://localhost:3010/admin-dashboard.html` ou fichier local (`file://`)
 
 Note: Ce prototype sera remplace par une application React/Vite dans une phase ulterieure.
@@ -142,12 +156,11 @@ Note: Ce prototype sera remplace par une application React/Vite dans une phase u
 - Protection DDoS infra a renforcer (WAF/reverse proxy/edge rate limit)
 - Strategie CSRF a formaliser selon le mode d'authentification front
 - Gestion centralisee des secrets en production (secret manager)
-- Ajouter le module `reservations` (entity, DTO, endpoints, validation metier)
 - Ajouter tests unitaires `categories` et `menu-items`
 
 ## Slide 1 Minute (Oral)
 - Objectif: securiser une API NestJS d'authentification et de gestion utilisateurs.
-- Realisations: auth complete, roles persistants, reset password, audit securite, categories et menu-items.
+- Realisations: auth complete, roles persistants, reset password, audit securite, categories/menu-items, bookings/event-requests/contacts.
 - Securite: Argon2, rotation refresh token, anti-enumeration, lockout progressif, CSP, throttling.
-- Tests: 22 tests unitaires passes, forte couverture sur services critiques.
-- Suite: module reservations, tests categories/menu-items, WAF, secret manager, politique CSRF et retention logs.
+- Tests: 35 tests unitaires passes, forte couverture sur services critiques.
+- Suite: tests categories/menu-items, WAF, secret manager, politique CSRF et retention logs.

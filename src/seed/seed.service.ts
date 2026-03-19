@@ -102,6 +102,8 @@ export class SeedService {
 			'BOISSONS CHAUDES',
 			'PETITS DÉJEUNERS', 
 			'PETITS DÉJEUNERS À LA CARTE',
+			'FORMULES DÉJEUNER',
+			'PLATS',
 			
 		];
 		const categoriesMap = new Map<string, Category>();
@@ -1985,6 +1987,57 @@ export class SeedService {
 				imageUrl: null,
 				isAvailable: true,
 				categoryName: 'PETITS DÉJEUNERS À LA CARTE',
+			},
+
+			// ----- Formule déjeuner -----
+
+			{
+				name: 'ENTRÉES + Plat ou Plat + Dessert',
+				description: null,
+				price: 1890,
+				priceGourmand: null,
+				imageUrl: null,
+				isAvailable: true,
+				categoryName: 'FORMULES DÉJEUNER',
+			},
+			{
+				name: 'ENTRÉES + Plat + Dessert',
+				description: null,
+				price: 2190,
+				priceGourmand: null,
+				imageUrl: null,
+				isAvailable: true,
+				categoryName: 'FORMULES DÉJEUNER',
+			},
+
+			// ----- Plats -----
+
+			{
+				name: 'BAVETTE D\'ALOYAU 160G, POMMES FRITES',
+				description: null,
+				price: null,
+				priceGourmand: null,
+				imageUrl: null,
+				isAvailable: true,
+				categoryName: 'PLATS',
+			},
+			{
+				name: 'PAVÉ DE MERLU, RATATOUILLE DE SAISON',
+				description: null,
+				price: null,
+				priceGourmand: null,
+				imageUrl: null,
+				isAvailable: true,
+				categoryName: 'PLATS',
+			},
+			{
+				name: 'SUGGESTION DU JOUR (SELON LES ENVIES DU CHEF)',
+				description: null,
+				price: null,
+				priceGourmand: null,
+				imageUrl: null,
+				isAvailable: true,
+				categoryName: 'PLATS',
 			},
 		];
 
