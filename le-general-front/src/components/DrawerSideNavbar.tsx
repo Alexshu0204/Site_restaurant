@@ -6,9 +6,15 @@ export default function DrawerSideNavbar() {
 
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "";
+    window.dispatchEvent(
+      new CustomEvent("drawer-state-change", { detail: { isOpen } }),
+    );
 
     return () => {
       document.body.style.overflow = "";
+      window.dispatchEvent(
+        new CustomEvent("drawer-state-change", { detail: { isOpen: false } }),
+      );
     };
   }, [isOpen]);
 
@@ -17,9 +23,9 @@ export default function DrawerSideNavbar() {
       {/* hamburger button */}
       <button
         onClick={() => setIsOpen(true)}
-        className="absolute left-4 top-1/2 z-[60] -translate-y-1/2 text-white"
+        className="absolute left-4 top-1/2 z-[60] -translate-y-1/2 text-white cursor-pointer hover:scale-110 transition-transform duration-200"
       >
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
         </svg>
       </button>

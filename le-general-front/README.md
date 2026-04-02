@@ -71,3 +71,21 @@ export default defineConfig([
   },
 ])
 ```
+
+## Docker Compose
+
+Un environnement Docker de dev est disponible dans `docker-compose.yml`.
+
+Lancer le front avec Vite dans Docker :
+
+```bash
+docker compose up
+```
+
+L'application sera disponible sur `http://localhost:5173`.
+
+Arreter et supprimer le conteneur :
+
+```bash
+docker compose down
+```
