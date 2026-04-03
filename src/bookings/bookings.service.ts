@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { BOOKING_MAX_GUESTS, CreateBookingDto } from './dto/create-booking.dto';
+import { PublicBookingDto } from './dto/public-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { Booking, BookingStatus } from './entities/booking.entity';
 import { User } from '../users/entities/user.entity';
@@ -100,6 +101,29 @@ export class BookingsService {
         : BookingStatus.Pending,
       userId: user.id,
       user,
+    });
+
+    return this.bookingsRepository.save(booking);
+  }
+
+  // Public booking endpoint - no authentication required
+  async createPublic(publicBookingDto: PublicBookingDto) {
+    const reservationDate = new Date(publicBookingDto.reservationDate);
+    this.validateReservationDate(reservationDate);
+    this.validateGuestsNumber(publicBookingDto.guestsNumber);
+
+    const booking = this.bookingsRepository.create({
+      reservationDate,
+      guestsNumber: publicBookingDto.guestsNumber,
+      specialRequest: publicBookingDto.specialRequest ?? null,
+      firstName: publicBookingDto.firstName,
+      lastName: publicBookingDto.lastName,
+      email: publicBookingDto.email,
+      phone: publicBookingDto.phone ?? null,
+      isMarketable: false,
+      status: BookingStatus.Pending,
+      userId: null,
+      user: null,
     });
 
     return this.bookingsRepository.save(booking);

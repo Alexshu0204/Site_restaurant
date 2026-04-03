@@ -40,10 +40,24 @@ export class Booking {
   })
   status: BookingStatus;
 
-  // Relation to User (Many bookings can belong to one user)
-  @ManyToOne(() => User, (user) => user.bookings, { onDelete: 'CASCADE' })
-  user: User;
+  // Contact information (for public bookings)
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  firstName: string | null;
 
-  @Column()
-  userId: number; // To facilitate access to the user ID
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  lastName: string | null;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  email: string | null;
+
+  @Column({ type: 'varchar', length: 30, nullable: true })
+  phone: string | null;
+
+  // Relation to User (Many bookings can belong to one user)
+  @ManyToOne(() => User, (user) => user.bookings, { onDelete: 'CASCADE', nullable: true })
+  user: User | null;
+
+  @Column({ nullable: true })
+  userId: number | null; // Nullable to accommodate public bookings
 }
+

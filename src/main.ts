@@ -15,6 +15,11 @@ import { join } from 'path';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
+const allowedCorsOrigins = new Set([
+  'http://localhost:5173',
+  'http://localhost:5174',
+]);
+
 async function bootstrap() {
   const nodeEnv = process.env.NODE_ENV ?? 'development';
   const isProduction = nodeEnv === 'production';
@@ -53,10 +58,16 @@ async function bootstrap() {
   // Serve simple static pages (ex: temporary admin dashboard prototype)
   app.useStaticAssets(join(__dirname, '..', 'public'));
 
-  // Enable CORS for specific origins and allow credentials
-  // 'null' is required for file:// origins (admin-dashboard.html opened locally)
+  // Only allow the expected local frontend dev origins.
   app.enableCors({
-    origin: ['http://localhost:3010', 'http://localhost:5173', 'null'],
+    origin: (origin, callback) => {
+      if (!origin || allowedCorsOrigins.has(origin)) {
+        callback(null, true);
+        return;
+      }
+
+      callback(new Error(`Origin non autorisee par CORS: ${origin}`), false);
+    },
     credentials: true,
     methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Authorization', 'Content-Type'],

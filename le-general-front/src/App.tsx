@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from "./pages/Home";
 import MenuPage from "./pages/MenuPage";
+import Delivery from "./pages/Delivery";
 import MainBookingPage from "./pages/MainBookingPage";
 import EventsPage from "./pages/EventsPage";
 import AvisClientsPage from "./pages/AvisClientsPage";
@@ -18,6 +19,7 @@ function App() {
         {/* = The train stations */}
         <Route path="/" element={<Home />} />
         <Route path="/menu" element={<MenuPage />} />
+        <Route path="/commandes" element={<Delivery />} />
         <Route path="/reservations" element={<MainBookingPage />} />
         <Route path="/evenements" element={<EventsPage />} />
         <Route path="/avis-clients" element={<AvisClientsPage />} />

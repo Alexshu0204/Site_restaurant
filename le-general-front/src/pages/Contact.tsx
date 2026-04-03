@@ -114,6 +114,30 @@ export default function Contact() {
                 </div>
               </div>
 
+              {/* Payment Methods */}
+              <div className="border-t border-white/10 pt-8">
+                <h3 className="text-white font-mono uppercase tracking-widest text-sm mb-4">Moyens de paiement</h3>
+                <p className="font-sans text-stone-400 text-sm leading-relaxed">
+                  American Express • Mastercard • Carte de débit • JBC • The Fork pay • Cash • Visa • China Union Pay • Apple pay • Google pay
+                </p>
+              </div>
+
+              {/* Facilities & Services */}
+              <div className="border-t border-white/10 pt-8">
+                <h3 className="text-white font-mono uppercase tracking-widest text-sm mb-4">Équipements & Services</h3>
+                <ul className="space-y-2 font-sans text-stone-400 text-sm">
+                  <li>✓ Accès personnes à mobilité réduite</li>
+                  <li>✓ Terrasse</li>
+                  <li>✓ Bar</li>
+                  <li>✓ Espace fumeur</li>
+                  <li>✓ Climatisation</li>
+                  <li>✓ Happy hour</li>
+                  <li>✓ Musique live</li>
+                  <li>✓ Idéal pour les familles</li>
+                  <li>✓ Animaux acceptés</li>
+                </ul>
+              </div>
+
             </div>
 
             {/* RIGHT COLUMN: Contact Form */}
