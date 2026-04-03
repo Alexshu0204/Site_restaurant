@@ -59,8 +59,17 @@ export default function DrawerSideNavbar() {
           <Link to="/menu" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
             Menu
           </Link>
-          <Link to="/reservation" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
+          <Link to="/reservations" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
             Réservation
+          </Link>
+          <Link to="/evenements" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
+            Événements
+          </Link>
+          <Link to="/avis-clients" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
+            Avis Clients
+          </Link>
+          <Link to="/contact" onClick={() => setIsOpen(false)} className="hover:text-gray-400 transition-colors duration-200">
+            Contact
           </Link>
         </nav>
       </div>

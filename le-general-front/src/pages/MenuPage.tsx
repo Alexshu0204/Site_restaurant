@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import Footer from '../components/Footer';
 import Header from '../components/Header';
 import MyButton from '../components/MyButton';
 import SectionText from '../components/SectionText';
@@ -10,7 +11,7 @@ import type { Category } from '../types/menu';
 interface MenuGroup {
   key: string;
   title: string;
-  description: string;
+  description: string | null;
   categoryNames: string[];
 }
 
@@ -18,10 +19,9 @@ const menuGroups: MenuGroup[] = [
   {
     key: 'notre-carte',
     title: 'NOTRE CARTE',
-    description:
-      "Les incontournables de la maison, dans l'esprit de la carte actuelle du Général.",
+    description: null,
     categoryNames: [
-      'COMPTOIRE DE LA MER',
+      'COMPTOIR DE LA MER',
       'VIANDES',
       'ENTRÉES',
       'SALADES',
@@ -40,8 +40,7 @@ const menuGroups: MenuGroup[] = [
   {
     key: 'menu-petit-dejeuner',
     title: 'MENU PETIT-DÉJEUNER',
-    description:
-      'Une lecture plus simple et plus rapide des formules et options du matin.',
+    description: null,
     categoryNames: ['PETITS DÉJEUNERS', 'PETITS DÉJEUNERS À LA CARTE'],
   },
   {
@@ -54,8 +53,7 @@ const menuGroups: MenuGroup[] = [
   {
     key: 'nos-boissons',
     title: 'NOS BOISSONS',
-    description:
-      'Vins, cocktails, softs et boissons chaudes regroupés dans une seule navigation.',
+    description: null,
     categoryNames: [
       'CHAMPAGNES',
       'EAUX',
@@ -83,6 +81,14 @@ const menuGroups: MenuGroup[] = [
     categoryNames: ['HAPPY HOUR'],
   },
 ];
+
+function normalizeCategoryName(categoryName: string) {
+  if (categoryName.startsWith('COMPTOIR') && categoryName.endsWith('DE LA MER')) {
+    return 'COMPTOIR DE LA MER';
+  }
+
+  return categoryName;
+}
 
 function createSectionId(categoryName: string) {
   const withoutAccents = categoryName
@@ -113,6 +119,7 @@ export default function MenuPage() {
         const visibleCategories = response.data
           .map((category) => ({
             ...category,
+            name: normalizeCategoryName(category.name),
             menuItems: [...category.menuItems]
               .filter((item) => item.isAvailable)
               .sort((left, right) => left.id - right.id),
@@ -247,9 +254,17 @@ export default function MenuPage() {
                 onClick={showPreviousMenu}
                 className="px-6 py-3 text-[10px] tracking-[0.2em] cursor-pointer"
               />
-              <span className="font-mono text-xs uppercase tracking-[0.3em] text-stone-400">
-                {activeMenuIndex + 1} / {menus.length}
-              </span>
+              <select
+                value={activeMenuIndex}
+                onChange={(e) => setActiveMenuIndex(Number(e.target.value))}
+                className="rounded-lg border border-white/20 bg-[#231f1d] px-4 py-2 font-mono text-xs uppercase tracking-[0.2em] text-white transition-colors hover:border-white/40 focus:outline-none focus:ring-2 focus:ring-white/30"
+              >
+                {menus.map((menu, index) => (
+                  <option key={menu.key} value={index}>
+                    {menu.title}
+                  </option>
+                ))}
+              </select>
               <MyButton
                 label="Carte suivante >"
                 variant="white"
@@ -319,6 +334,7 @@ export default function MenuPage() {
           </div>
         </div>
       </SectionText>
+      <Footer />
     </div>
   );
 }

@@ -1,5 +1,6 @@
 // src/pages/home.tsx
 
+import Footer from "../components/Footer";
 import Header from "../components/Header";
 import MyButton from "../components/MyButton";
 import SectionText from "../components/SectionText";
@@ -71,7 +72,7 @@ Ut velit mauris, egestas sed, gravida nec, ornare ut, mi. Aenean ut orci vel mas
 
 Aliquam convallis sollicitudin purus. Praesent aliquam, enim at fermentum mollis, ligula massa adipiscing nisl, ac euismod nibh nisl eu lectus. Fusce vulputate sem at sapien. Vivamus leo. Aliquam euismod libero eu enim. Nulla nec felis sed leo placerat imperdiet. Aenean suscipit nulla in justo. Suspendisse cursus rutrum augue. Nulla tincidunt tincidunt mi. Curabitur iaculis, lorem vel rhoncus faucibus, felis magna fermentum augue, et ultricies lacus lorem varius purus. Curabitur eu amet.
             </div>
-            
+            <Footer />
         </div>
     )
 

@@ -44,11 +44,9 @@ export default function SectionText({
                 {title}
             </h2>
 
-            {description && (
-                <p className={descriptionClasses} style={{ textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)" }}>
-                    {description}
-                </p>
-            )}
+            <p className={descriptionClasses} style={{ textShadow: "1px 1px 2px rgba(0, 0, 0, 0.5)" }}>
+                {description || '\u00A0'}
+            </p>
 
             {children}
         </section>

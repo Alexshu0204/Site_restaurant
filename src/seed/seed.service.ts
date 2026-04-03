@@ -67,9 +67,18 @@ export class SeedService {
 	private async ensureCategories(
 		categoriesRepository: Repository<Category>,
 	): Promise<Map<string, Category>> {
+		const legacyCategory = await categoriesRepository.findOne({
+			where: { name: 'COMPTOIRE DE LA MER' },
+		});
+
+		if (legacyCategory) {
+			legacyCategory.name = 'COMPTOIR DE LA MER';
+			await categoriesRepository.save(legacyCategory);
+		}
+
 		// Define the category names we want to ensure exist in the database.
 		const categoryNames = [
-			'COMPTOIRE DE LA MER', 
+			'COMPTOIR DE LA MER', 
 			'VIANDES', 
 			'ENTRÉES', 
 			'SALADES', 
@@ -153,7 +162,7 @@ export class SeedService {
 
 		}> = [
 
-			// ----- Comptoire de la mer -----
+			// ----- Comptoir de la mer -----
 
 			{
 				name: '6 huîtres fines de claire N°3',
@@ -163,7 +172,7 @@ export class SeedService {
 				priceGourmand: null,
 				imageUrl: null,
 				isAvailable: true,
-				categoryName: 'COMPTOIRE DE LA MER',
+				categoryName: 'COMPTOIR DE LA MER',
 			},
 
 			{
@@ -174,7 +183,7 @@ export class SeedService {
 				priceGourmand: null,
 				imageUrl: null,
 				isAvailable: true,
-				categoryName: 'COMPTOIRE DE LA MER',
+				categoryName: 'COMPTOIR DE LA MER',
 			},
 
 			{
@@ -186,7 +195,7 @@ export class SeedService {
 				priceGourmand: null,
 				imageUrl: null,
 				isAvailable: true,
-				categoryName: 'COMPTOIRE DE LA MER',
+				categoryName: 'COMPTOIR DE LA MER',
 			},
 
 			// ----- Viandes -----
